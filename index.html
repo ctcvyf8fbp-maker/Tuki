@@ -256,6 +256,507 @@ B2:['כתוב מכתב תלונה קצר לחברת תעופה על טיסה ש�
 C1:['כתוב פסקה טיעונית: האם בינה מלאכותית תשנה את שוק העבודה?','תאר אירוע שהשפיע על השקפת העולם שלך.']
 };
 
+/* ====================== MORE CONTENT ====================== */
+const MORE_WORDS={
+A1:`dog|כלב|My dog loves to play.|daily
+cat|חתול|The cat is sleeping.|daily
+car|מכונית|We have a red car.|daily
+bread|לחם|I buy bread every day.|daily
+milk|חלב|Do you want milk in your coffee?|daily
+egg|ביצה|I eat an egg for breakfast.|daily
+chair|כיסא|Sit on this chair.|daily
+table|שולחן|The keys are on the table.|daily
+door|דלת|Please close the door.|daily
+window|חלון|Open the window, please.|daily
+room|חדר|My room is small.|daily
+bed|מיטה|I go to bed at eleven.|daily
+phone|טלפון|Where is my phone?|daily
+money|כסף|I don't have much money.|daily
+city|עיר|Tel Aviv is a busy city.|travel
+street|רחוב|I live on a quiet street.|travel
+bus|אוטובוס|I take the bus to work.|travel
+train|רכבת|The train is late.|travel
+sea|ים|The sea is warm today.|travel
+sun|שמש|The sun is very strong.|daily
+rain|גשם|I love the rain.|daily
+hot|חם|It's very hot in summer.|daily
+small|קטן|This shirt is too small.|daily
+new|חדש|I have a new phone.|daily
+old|ישן; זקן|This is an old building.|daily
+good|טוב|That's a good idea!|feel
+bad|רע|I had a bad day.|feel
+sad|עצוב|Why are you sad?|feel
+tired|עייף|I'm tired after work.|feel
+hungry|רעב|I'm hungry. Let's eat!|feel
+mother|אמא|My mother is a teacher.|feel
+father|אבא|My father works in a bank.|feel
+brother|אח|My brother is twelve.|feel
+sister|אחות|My sister lives in Haifa.|feel
+child|ילד|The child is playing outside.|feel
+name|שם|What's your name?|daily
+day|יום|Have a nice day!|daily
+night|לילה|Good night!|daily
+week|שבוע|See you next week.|daily
+year|שנה|Happy new year!|daily
+time|זמן; שעה|What time is it?|daily
+go|ללכת, לנסוע|Let's go home.|daily
+come|לבוא|Come with me!|daily
+see|לראות|I can see the sea.|daily
+know|לדעת, להכיר|I don't know.|study
+want|לרצות|I want some water.|daily
+like|לאהוב, לחבב|I like music.|feel
+need|להצטרך|I need help.|daily
+help|עזרה; לעזור|Can you help me?|daily
+read|לקרוא|I read every night.|study
+write|לכתוב|Write your name here.|study
+speak|לדבר|Do you speak English?|study
+listen|להקשיב|Listen to the teacher.|study
+open|לפתוח|The shop opens at nine.|daily
+close|לסגור|Please close your eyes.|daily
+sleep|לישון|I sleep eight hours.|daily
+drink|לשתות|Drink some water.|daily
+cook|לבשל|My dad likes to cook.|daily
+play|לשחק; לנגן|The kids play football.|daily
+walk|ללכת ברגל|I walk to school.|daily
+run|לרוץ|I run in the park.|daily
+teacher|מורה|Our teacher is very nice.|study
+student|תלמיד, סטודנט|She is a good student.|study
+word|מילה|What does this word mean?|study
+question|שאלה|Can I ask a question?|study
+answer|תשובה; לענות|I know the answer!|study
+easy|קל|This test is easy.|study
+difficult|קשה|English is not difficult.|study
+beautiful|יפה|What a beautiful day!|feel
+favorite|אהוב, מועדף|Pizza is my favorite food.|feel`,
+A2:`already|כבר|I've already eaten.|daily
+still|עדיין|Are you still at work?|daily
+usually|בדרך כלל|I usually wake up at seven.|daily
+sometimes|לפעמים|Sometimes I walk to work.|daily
+never|אף פעם|I never drink coffee at night.|daily
+together|ביחד|Let's eat together.|feel
+enough|מספיק|Is there enough food?|daily
+maybe|אולי|Maybe it will rain.|daily
+problem|בעיה|No problem!|work
+idea|רעיון|I have an idea.|work
+plan|תוכנית; לתכנן|What's the plan for tonight?|work
+choose|לבחור|Choose one color.|daily
+decide|להחליט|I can't decide.|daily
+forget|לשכוח|Don't forget your keys.|daily
+try|לנסות|Try again!|study
+learn|ללמוד|I want to learn English.|study
+understand|להבין|I don't understand.|study
+explain|להסביר|Can you explain it again?|study
+practice|תרגול; לתרגל|Practice makes perfect.|study
+mistake|טעות|Everyone makes mistakes.|study
+mean|להתכוון; משמעות|What do you mean?|study
+spend|להוציא (כסף); לבלות (זמן)|I spend too much money.|daily
+save|לחסוך; לשמור|I want to save money.|daily
+pay|לשלם|Can I pay by card?|daily
+price|מחיר|What's the price?|daily
+free|חינם; פנוי|Are you free tomorrow?|daily
+busy|עסוק|I'm very busy today.|work
+early|מוקדם|I wake up early.|daily
+late|מאוחר|Sorry I'm late.|daily
+soon|בקרוב|See you soon!|daily
+far|רחוק|Is it far from here?|travel
+near|קרוב|There's a park near my house.|travel
+left|שמאלה; שמאל|Turn left at the corner.|travel
+right|ימינה; נכון|You're right!|travel
+straight|ישר|Go straight ahead.|travel
+map|מפה|Let's check the map.|travel
+trip|טיול, נסיעה|How was your trip?|travel
+visit|לבקר|I want to visit Paris.|travel
+beach|חוף ים|Let's go to the beach.|travel
+mountain|הר|We climbed a mountain.|travel
+country|מדינה|Which country are you from?|travel
+weekend|סוף שבוע|What did you do on the weekend?|daily
+holiday|חג; חופשה|Happy holidays!|travel
+birthday|יום הולדת|When is your birthday?|feel
+party|מסיבה|The party starts at nine.|feel
+gift|מתנה|Thank you for the gift!|feel
+worried|מודאג|Don't be worried.|feel
+excited|נרגש|I'm so excited!|feel
+afraid|מפחד|I'm afraid of dogs.|feel
+bored|משועמם|I'm bored. Let's go out.|feel
+proud|גאה|I'm proud of you.|feel
+lucky|בר מזל|You're so lucky!|feel
+funny|מצחיק|That movie was funny.|feel
+kind|אדיב, נחמד|She is very kind.|feel
+polite|מנומס|Be polite to everyone.|feel
+clothes|בגדים|I need new clothes.|daily
+shoes|נעליים|These shoes are comfortable.|daily
+wear|ללבוש|What are you wearing?|daily
+grow|לגדול; לגדל|Children grow fast.|daily
+change|לשנות; שינוי|I want to change my job.|work
+build|לבנות|They're building a new road.|work
+send|לשלוח|Send me a message.|work
+receive|לקבל|Did you receive my email?|work
+office|משרד|I work in an office.|work
+boss|בוס, מנהל|My boss is on vacation.|work
+job|עבודה, משרה|I love my job.|work
+earn|להרוויח|He earns a good salary.|work
+breakfast|ארוחת בוקר|Breakfast is ready!|daily
+dinner|ארוחת ערב|Let's have dinner together.|daily
+famous|מפורסם|He's a famous singer.|feel`,
+B1:`although|למרות ש-|Although it was late, we continued.|study
+however|עם זאת|It's expensive. However, it's worth it.|study
+instead|במקום|Let's walk instead of driving.|daily
+unless|אלא אם כן|Don't call unless it's urgent.|study
+probably|כנראה|It will probably rain.|daily
+especially|במיוחד|I love fruit, especially mangoes.|daily
+actually|בעצם, למעשה|Actually, I don't agree.|daily
+eventually|בסופו של דבר|Eventually, he found a job.|daily
+recently|לאחרונה|I've been busy recently.|daily
+immediately|מיד|Call me immediately.|work
+attitude|גישה, יחס|She has a positive attitude.|feel
+behavior|התנהגות|His behavior was strange.|feel
+belief|אמונה|It's my personal belief.|feel
+confident|בטוח בעצמו|Be confident in the interview.|feel
+curious|סקרן|Children are curious.|feel
+disappointed|מאוכזב|I was disappointed with the results.|feel
+embarrassed|נבוך|I felt embarrassed.|feel
+grateful|אסיר תודה|I'm grateful for your help.|feel
+jealous|מקנא|He's jealous of his brother.|feel
+patient|סבלני; מטופל|Be patient, it takes time.|feel
+annoying|מעצבן|That noise is annoying.|feel
+argue|להתווכח|They always argue about money.|feel
+apologize|להתנצל|I apologize for the delay.|work
+promise|הבטחה; להבטיח|I promise I'll be on time.|feel
+mention|להזכיר|He didn't mention it.|work
+describe|לתאר|Describe your ideal job.|study
+compare|להשוות|Compare the two options.|study
+prefer|להעדיף|I prefer tea to coffee.|daily
+manage|לנהל; להצליח|I managed to finish on time.|work
+succeed|להצליח|She succeeded in her exam.|work
+fail|להיכשל|Don't be afraid to fail.|work
+prepare|להכין|I need to prepare for the meeting.|work
+organize|לארגן|Let's organize a party.|work
+develop|לפתח|We developed a new app.|work
+increase|לעלות; להגדיל|Prices increased this year.|work
+reduce|להפחית|We need to reduce costs.|work
+solution|פתרון|We need a quick solution.|work
+goal|מטרה|What's your goal this year?|work
+challenge|אתגר|It's a big challenge.|work
+skill|מיומנות|Communication is an important skill.|work
+knowledge|ידע|Knowledge is power.|study
+experience|ניסיון; חוויה|It was an amazing experience.|work
+advantage|יתרון|Speaking English is an advantage.|work
+disadvantage|חיסרון|What are the disadvantages?|work
+benefit|תועלת, הטבה|The job has good benefits.|work
+customer|לקוח|The customer is always right.|work
+colleague|עמית לעבודה|My colleagues are friendly.|work
+interview|ראיון|I have a job interview tomorrow.|work
+apply|להגיש מועמדות|I applied for a new job.|work
+available|זמין|Are you available on Monday?|work
+appointment|פגישה, תור|I have an appointment at four.|daily
+schedule|לוח זמנים|My schedule is full.|work
+lend|להשאיל|Can you lend me some money?|daily
+afford|להרשות לעצמו (כספית)|I can't afford a new car.|daily
+expensive|יקר|Rent is very expensive here.|daily
+pollution|זיהום|Air pollution is a big problem.|study
+crowded|צפוף|The bus was very crowded.|travel
+accommodation|לינה|We booked accommodation near the beach.|travel
+destination|יעד|Paris is a popular destination.|travel
+souvenir|מזכרת|I bought a souvenir for my mom.|travel
+guide|מדריך|Our guide spoke three languages.|travel
+ancient|עתיק|We visited an ancient city.|travel
+noise|רעש|There's too much noise here.|daily
+neighborhood|שכונה|I live in a quiet neighborhood.|daily
+equipment|ציוד|Bring your sports equipment.|daily
+emergency|מצב חירום|Call 101 in an emergency.|daily
+injury|פציעה|He has a knee injury.|daily`,
+B2:`acknowledge|להכיר ב-, להודות ב-|He acknowledged his mistake.|work
+adapt|להסתגל|It's hard to adapt to a new country.|feel
+anticipate|לצפות מראש|We anticipate some delays.|work
+approach|גישה; להתקרב|We need a new approach.|work
+assess|להעריך|The teacher assessed our work.|study
+attempt|ניסיון; לנסות|It was his first attempt.|work
+beneficial|מועיל|Exercise is beneficial for health.|study
+capable|מסוגל|She's capable of great things.|work
+comprehensive|מקיף|We need a comprehensive plan.|work
+concern|דאגה; לדאוג|My main concern is safety.|work
+conclude|להסיק; לסיים|We concluded that the plan works.|study
+considerable|ניכר|It took considerable effort.|work
+contribute|לתרום|Everyone contributed to the project.|work
+convince|לשכנע|You convinced me!|feel
+crucial|קריטי, מכריע|Timing is crucial.|work
+decline|לרדת; לסרב|Sales declined last month.|work
+deliberately|בכוונה|He did it deliberately.|feel
+determine|לקבוע|We need to determine the cause.|work
+emphasize|להדגיש|She emphasized the importance of teamwork.|work
+encounter|להיתקל ב-|We encountered some problems.|work
+enormous|עצום|It was an enormous success.|work
+ensure|לוודא|Please ensure the door is locked.|work
+essential|חיוני|Water is essential for life.|study
+evaluate|להעריך|We will evaluate the results.|work
+evidence|ראיות|There's no evidence.|study
+exaggerate|להגזים|Don't exaggerate!|feel
+expand|להתרחב|The company is expanding.|work
+fundamental|בסיסי, יסודי|It's a fundamental right.|study
+genuine|אמיתי, כן|She showed genuine interest.|feel
+hesitate|להסס|Don't hesitate to ask.|feel
+identify|לזהות|Can you identify the problem?|work
+impact|השפעה|Technology has a huge impact on our lives.|study
+implement|ליישם|We'll implement the new system.|work
+indicate|להצביע על|The data indicates a problem.|work
+influence|השפעה; להשפיע|Parents influence their children.|feel
+initial|ראשוני|Our initial plan failed.|work
+insist|להתעקש|He insisted on paying.|feel
+interpret|לפרש|How do you interpret this?|study
+maintain|לשמור על, לתחזק|It's hard to maintain a balance.|work
+obvious|ברור|The answer is obvious.|study
+obtain|להשיג|You need to obtain a permit.|work
+occur|להתרחש|The accident occurred at night.|study
+overcome|להתגבר על|She overcame many difficulties.|feel
+perspective|נקודת מבט|Try to see it from my perspective.|feel
+precise|מדויק|Please be precise.|work
+predict|לחזות|It's hard to predict the future.|study
+priority|עדיפות|Safety is our top priority.|work
+pursue|לשאוף ל-, לרדוף אחרי|Pursue your dreams.|feel
+regret|להתחרט; חרטה|I don't regret anything.|feel
+relevant|רלוונטי|That's not relevant.|work
+resolve|לפתור|We resolved the issue.|work
+restrict|להגביל|Access is restricted.|work
+sufficient|מספיק|We have sufficient time.|work
+sustainable|בר קיימא|We need sustainable energy.|study
+tendency|נטייה|He has a tendency to be late.|feel
+tolerate|לסבול|I can't tolerate rudeness.|feel
+ultimately|בסופו של דבר|Ultimately, it's your decision.|study
+vague|מעורפל|His answer was vague.|study
+vary|להשתנות|Prices vary from shop to shop.|study
+widespread|נפוץ|The problem is widespread.|study
+withdraw|למשוך; לסגת|I withdrew money from the bank.|work
+worthwhile|כדאי, שווה|The trip was worthwhile.|feel
+yield|להניב; תשואה|The investment yielded good results.|work`,
+C1:`abundant|שופע|The region has abundant resources.|study
+accountable|נושא באחריות|Leaders must be held accountable.|work
+advocate|לתמוך ב-; תומך|She advocates for equal rights.|study
+allegedly|לכאורה|He allegedly stole the money.|study
+ambivalent|דו-ערכי, מתלבט|I feel ambivalent about the move.|feel
+arbitrary|שרירותי|The decision seemed arbitrary.|work
+articulate|רהוט; לנסח|She is very articulate.|study
+assertive|אסרטיבי|Be more assertive in meetings.|work
+attain|להשיג|He attained his goals.|work
+bias|הטיה|The study shows a clear bias.|study
+coherent|קוהרנטי, עקבי|Write a coherent argument.|study
+complacent|שאנן|Don't become complacent.|work
+comprise|להיות מורכב מ-|The team comprises five members.|work
+concise|תמציתי|Keep your answer concise.|study
+contemplate|לשקול, להרהר|She contemplated moving abroad.|feel
+controversial|שנוי במחלוקת|It's a controversial topic.|study
+conversely|לעומת זאת|Conversely, prices fell in the north.|study
+deteriorate|להידרדר|His health deteriorated.|study
+diminish|לפחות, להקטין|The pain diminished over time.|study
+discern|להבחין|It's hard to discern the truth.|study
+dismiss|לדחות; לפטר|He dismissed the idea.|work
+disrupt|לשבש|The strike disrupted traffic.|work
+elaborate|לפרט; מפורט|Could you elaborate on that?|study
+elicit|לעורר (תגובה)|The question elicited a strong reaction.|study
+empathy|אמפתיה|Empathy is key to good leadership.|feel
+endorse|לתמוך ב-, לאשר|The minister endorsed the plan.|work
+entrepreneur|יזם|He's a successful entrepreneur.|work
+exemplify|להדגים|This case exemplifies the problem.|study
+foster|לטפח|We aim to foster creativity.|work
+hinder|לעכב|Bad weather hindered the rescue.|work
+hypothesis|השערה|Test your hypothesis.|study
+imminent|ממשמש ובא|A storm is imminent.|study
+implicit|מרומז|There was an implicit agreement.|study
+incentive|תמריץ|They offered a financial incentive.|work
+integrity|יושרה|He's a man of integrity.|feel
+intricate|מורכב, מסובך|The design is intricate.|study
+lucrative|רווחי|It's a lucrative business.|work
+mundane|שגרתי, אפור|I hate mundane tasks.|daily
+negligible|זניח|The difference is negligible.|study
+notorious|ידוע לשמצה|The area is notorious for crime.|study
+obsolete|מיושן|This technology is obsolete.|work
+paradox|פרדוקס|It's a strange paradox.|study
+pervasive|נפוץ מאוד, חודר|Social media is pervasive.|study
+plausible|סביר, הגיוני|That's a plausible explanation.|study
+prevalent|רווח, נפוץ|The disease is prevalent in the region.|study
+profound|עמוק|It had a profound effect on me.|feel
+prominent|בולט|She's a prominent scientist.|study
+reconcile|ליישב, להשלים|They reconciled after the fight.|feel
+redundant|מיותר|This sentence is redundant.|study
+reinforce|לחזק|Practice reinforces learning.|study
+rigorous|קפדני, מחמיר|The training is rigorous.|study
+scarce|נדיר, דל|Water is scarce in the desert.|study
+spontaneous|ספונטני|It was a spontaneous decision.|feel
+subsequent|שלאחר מכן|Subsequent studies confirmed this.|study
+subtle|עדין, דק|There's a subtle difference.|study
+superficial|שטחי|His knowledge is superficial.|study
+tedious|מייגע|The process is tedious.|work
+thrive|לשגשג|Plants thrive in sunlight.|feel
+trivial|פעוט, טריוויאלי|Don't worry about trivial things.|daily
+viable|ישים, בר קיימא|Is it a viable option?|work
+vulnerable|פגיע|Children are vulnerable.|feel
+whereas|בעוד ש-|I like tea, whereas she likes coffee.|study
+wholeheartedly|בלב שלם|I agree wholeheartedly.|feel`
+};
+const MORE_CLOZE={
+A1:`My sister ___ two children.|has|have;has;is;are|עם he / she / it אומרים has.
+They ___ at home now.|are|is;am;are;be|עם they: are.
+I ___ like coffee.|don't|doesn't;don't;not;isn't|שלילה עם I: don't.
+___ you like tea?|Do|Does;Do;Are;Is|שאלה עם you: Do.
+___ she work here?|Does|Do;Does;Is;Are|שאלה עם he / she / it: Does.
+There ___ two cats in the garden.|are|is;are;am;be|ברבים: there are.
+This is ___ umbrella.|an|a;an;the;one|umbrella מתחילה בצליל תנועה: an.
+I go to work ___ bus.|by|in;on;by;with|אמצעי תחבורה: by bus.
+My birthday is ___ May.|in|on;at;in;to|לפני חודשים: in.
+The meeting is ___ Monday.|on|in;on;at;to|לפני ימים: on.
+I wake up ___ seven o'clock.|at|in;on;at;by|לפני שעה: at.
+These are my ___.|books|book;books;bookes;a book|ברבים מוסיפים s.
+How ___ are you?|old|many;much;old;age|"בן כמה" = How old.
+I have three ___.|children|childs;children;childrens;child|רבים חריג: child ← children.
+She is ___ teacher.|a|a;an;one;the one|לפני מקצוע שמים a / an.
+We ___ watching TV.|are|is;am;are;be|הווה מתמשך: are + ing.
+He can ___ very well.|swim|swims;swim;swimming;to swim|אחרי can: צורת בסיס.
+___ is your name?|What|Who;What;Where;How|"מה" = What.
+___ do you live?|Where|What;Where;When;Who|"איפה" = Where.
+I'm ___ Israel.|from|in;from;of;at|"אני מ..." = I'm from.
+Look ___ that bird!|at|to;at;on;in|look at = להסתכל על.
+My brother is ___ than me.|older|old;older;oldest;more old|השוואה: er + than.
+It's ___ today. Take a coat.|cold|hot;cold;sunny;warm|קר = cold.
+I ___ my teeth every morning.|brush|wash;brush;clean;make|brush my teeth = לצחצח שיניים.
+Can I ___ a coffee, please?|have|take;have;make;do|בהזמנה: Can I have...
+She ___ TV every evening.|watches|watch;watches;watchs;watching|watch + es עם she.
+There isn't ___ milk.|any|some;any;a;many|בשלילה: any.
+I'd like ___ water, please.|some|any;some;a;many|בבקשה: some.
+I'm ___. I want to sleep.|tired|hungry;tired;happy;angry|עייף = tired.
+Let's ___ a walk.|take|make;do;take;go|take a walk = לצאת להליכה.
+What ___ is it? It's five o'clock.|time|hour;time;clock;day|What time is it?
+We ___ to the cinema on Fridays.|go|goes;go;going;are go|עם we: go, בלי s.`,
+A2:`I ___ to Eilat last summer.|went|go;went;gone;have gone|last summer = עבר פשוט.
+She ___ her keys yesterday.|lost|lose;lost;losed;loses|lose ← lost.
+We ___ dinner when he called.|were having|had;were having;have;are having|פעולה שהייתה באמצע בעבר.
+I've ___ finished my homework.|already|yet;already;still;ever|already = כבר, במשפט חיובי.
+Have you finished ___?|yet|already;yet;still;ever|yet = כבר, בשאלה ובשלילה.
+I've never ___ sushi.|eaten|ate;eat;eaten;eating|have + V3.
+He is the ___ student in the class.|best|good;better;best;most good|"הכי טוב" = the best.
+This book is ___ than that one.|more interesting|interestinger;more interesting;most interesting;interesting|מילה ארוכה: more + than.
+I'm going ___ visit my grandma.|to|for;to;at;in|be going to + פועל.
+I'm interested ___ music.|in|on;in;at;about|interested in.
+She's afraid ___ spiders.|of|from;of;about;with|afraid of.
+You ___ smoke here. It's not allowed.|mustn't|don't have to;mustn't;can;should|mustn't = אסור.
+You ___ come if you don't want to.|don't have to|mustn't;don't have to;can't;shouldn't|don't have to = לא חייבים.
+He ___ speak French when he was five.|could|can;could;may;must|יכולת בעבר: could.
+How many ___ do you have?|brothers|brother;brothers;brotheres;of brother|How many + רבים.
+There's ___ sugar in my coffee.|too much|too many;too much;enough of;a lot|sugar לא נספר: too much.
+I'm not old ___ to drive.|enough|too;enough;very;so|תואר + enough.
+It was ___ hot to go outside.|too|enough;too;so much;very much|too + תואר = יותר מדי.
+I met him two years ___.|ago|before;ago;since;for|"לפני X זמן" = ago.
+While I ___, it started to rain.|was walking|walked;was walking;am walking;walk|while + past progressive.
+She asked me ___ I was okay.|if|that;if;what;so|בשאלת כן/לא מדווחת: if.
+I don't mind ___ the dishes.|doing|to do;doing;do;did|mind + ing.
+He promised ___ on time.|to be|being;to be;be;been|promise + to.
+Turn ___ the light, please. It's dark.|on|in;on;up;off|turn on = להדליק.
+Can you pick me ___ at eight?|up|on;up;in;out|pick up = לאסוף.
+I need to ___ up early tomorrow.|get|go;get;stand;make|get up = לקום.
+Who ___ this cake? It's delicious!|made|did;made;make;done|make ← made.
+I usually ___ breakfast at seven.|have|eat at;have;take;do|have breakfast.
+We had a great time ___ the party.|at|in;at;on;to|at the party.
+I'll call you when I ___ home.|get|will get;get;got;getting|אחרי when (עתיד) – הווה.
+My phone is ___ than yours.|cheaper|cheap;cheaper;more cheap;cheapest|מילה קצרה: er.
+I ___ been to London twice.|have|has;have;had;am|I have + V3.`,
+B1:`If I ___ rich, I would travel the world.|were|am;was going;were;will be|תנאי שני: If + were.
+If you heat ice, it ___.|melts|melt;melts;will melted;melted|עובדה כללית: הווה פשוט.
+The house ___ in 1990.|was built|built;was built;is building;has build|סביל בעבר: was + V3.
+English ___ all over the world.|is spoken|speaks;is spoken;is speaking;spoke|סביל בהווה: is + V3.
+She said she ___ tired.|was|is;was;has;be|דיבור עקיף: הזמן זז אחורה.
+You ___ see a doctor.|should|should;must to;ought;need|עצה: should.
+He ___ be at home; his car is outside.|must|can't;must;should;would|הסקה בטוחה: must.
+She ___ be at work; it's Sunday.|can't|mustn't;can't;shouldn't;won't|הסקה שלילית: can't.
+I used ___ in Haifa.|to live|live;to live;living;lived|used to + בסיס.
+The man ___ lives next door is a doctor.|who|which;who;whose;where|לאדם: who.
+This is the town ___ I was born.|where|which;where;who;when|למקום: where.
+I wish I ___ speak Japanese.|could|can;could;will;would|wish + could.
+She made me ___.|laugh|to laugh;laugh;laughing;laughed|make someone + בסיס.
+I'm thinking ___ changing jobs.|about|on;about;to;for|think about + ing.
+He apologized ___ being late.|for|about;for;of;on|apologize for.
+I'll call you as soon as I ___.|arrive|will arrive;arrive;arrived;arriving|אחרי as soon as: הווה.
+By the time we arrived, the film ___.|had started|started;had started;has started;starts|עבר מושלם: had + V3.
+Despite ___ tired, she kept working.|being|be;being;she was;to be|despite + ing.
+The more you practice, the ___ you get.|better|good;better;best;more good|the more... the better.
+Neither John ___ Mary came.|nor|or;nor;and;but|neither... nor.
+She's ___ smart that she finished early.|so|such;so;too;very|so + תואר + that.
+It was ___ a good movie!|such|so;such;too;very|such + a + תואר + שם.
+I have no idea ___ he lives.|where|where does;where;that;what|שאלה עקיפה: בלי does.
+Could you tell me what time ___?|it is|is it;it is;it's is;does it|שאלה עקיפה: סדר רגיל.
+I ___ my car repaired yesterday.|had|made;had;did;got to|have something done.
+The film was ___. I fell asleep.|boring|bored;boring;bore;boringly|ing = מה שגורם לרגש.
+I was ___ by the news.|surprised|surprising;surprised;surprise;surprisingly|ed = הרגש שלי.
+If it doesn't rain, we ___ to the beach.|will go|went;will go;would go;go to|תנאי ראשון: will.
+I'd like ___ you a question.|to ask|asking;to ask;ask;asked|would like + to.
+She's good at ___ people.|helping|help;helping;to help;helped|at + ing.
+He has lived here ___ he was a child.|since|for;since;from;when|since + נקודת התחלה.
+The keys ___ on the table. Look!|are|is;are;be;was|keys ברבים: are.`,
+B2:`If I had studied, I ___ the exam.|would have passed|would pass;will pass;would have passed;had passed|תנאי שלישי: would have + V3.
+If I ___ you, I'd take the job.|were|was being;were;am;had been|If I were you = עצה.
+She ___ have forgotten; she never forgets.|can't|mustn't;can't;shouldn't;won't|הסקה שלילית בעבר: can't have.
+He ___ have taken the bus; his car is here.|must|must;can't;should;would|הסקה בעבר: must have.
+You ___ have told me! I would have helped.|should|must;should;could;would|ביקורת על העבר: should have.
+Not only ___ the exam, she got the top grade.|did she pass|she passed;did she pass;she did pass;passed she|Not only בהתחלה = היפוך.
+Rarely ___ such a beautiful sunset.|have I seen|I have seen;have I seen;I saw;did I saw|Rarely בהתחלה = היפוך.
+The report needs ___ by Friday.|to be finished|to finish;finishing;to be finished;finished|סביל אחרי need.
+She's believed ___ the country.|to have left|to leave;to have left;leaving;that she left|is believed + to have + V3.
+Had I known, I ___ earlier.|would have come|would come;would have come;will come;came|Had I = If I had.
+I regret ___ you that you've failed.|to tell|telling;to tell;tell;told|regret to = מצטער להודיע.
+I regret ___ him the truth.|not telling|not to tell;not telling;don't tell;not told|regret + ing = מתחרט על.
+This time next week, I ___ on a beach.|will be lying|will lie;will be lying;am lying;lie|עתיד מתמשך.
+They ___ for hours when we arrived.|had been waiting|waited;have waited;had been waiting;were wait|עבר מושלם מתמשך.
+It's no use ___ about it.|worrying|to worry;worrying;worry;worried|It's no use + ing.
+She succeeded ___ the record.|in breaking|to break;in breaking;breaking;on breaking|succeed in + ing.
+I object ___ treated like a child.|to being|to be;to being;being;for being|object to + ing.
+___ the rain, the match continued.|In spite of|Although;In spite of;Even;Despite of|in spite of + שם עצם.
+The company, ___ was founded in 2010, is growing.|which|that;which;who;what|פסוקית עם פסיקים: which.
+Hardly had I arrived ___ the phone rang.|when|than;when;then;that|Hardly... when.
+Supposing you ___ the lottery, what would you do?|won|win;won;will win;had won|Supposing + עבר.
+The results were ___ than expected.|far better|much good;far better;more better;very better|הדגשת השוואה: far better.
+We need to come up ___ a solution.|with|to;with;for;by|come up with = להמציא.
+I can't put up ___ this noise.|with|to;with;on;for|put up with = לסבול.
+The meeting was called ___ due to the storm.|off|out;off;up;down|call off = לבטל.
+Let's carry ___ with the plan.|on|out;on;over;up|carry on = להמשיך.
+She turned ___ the job offer.|down|up;down;off;over|turn down = לסרב.
+I ran ___ an old friend yesterday.|into|over;into;across to;up|run into = לפגוש במקרה.
+He takes ___ his father; they look alike.|after|after;over;up;on|take after = להיות דומה ל-.
+The lesson was difficult; ___, we all passed.|nevertheless|therefore;nevertheless;moreover;because|ניגוד: nevertheless.`,
+C1:`Seldom ___ such dedication.|have I witnessed|I have witnessed;have I witnessed;I witnessed;did I witnessed|Seldom בהתחלה = היפוך.
+It is essential that he ___ on time.|be|is;be;was;will be|Subjunctive אחרי essential that.
+Were it not for her help, I ___.|would have failed|would fail;would have failed;will fail;failed|Were it not for = אלמלא.
+No sooner had she left ___ it began to snow.|than|when;than;that;then|No sooner... than.
+Under no circumstances ___ open this door.|should you|you should;should you;you must;do you|Under no circumstances = היפוך.
+She's ___ to win the award.|bound|bound;certainly;sure of;doubt|be bound to = בטוח ש-.
+His argument doesn't hold ___.|water|ground;water;true;fast|hold water = להיות משכנע.
+___ as it may seem, it's true.|Strange|Strangely;Strange;How strange;Strangeness|תואר + as it may seem.
+The new policy will come into ___ next month.|effect|affect;effect;force of;power|come into effect = להיכנס לתוקף.
+I take ___ with that remark.|issue|issue;problem;offence to;matter|take issue with = לחלוק על.
+She was on the ___ of tears.|verge|edge;verge;border;line|on the verge of = על סף.
+It goes without ___ that safety comes first.|saying|telling;saying;speaking;told|It goes without saying = מובן מאליו.
+The CEO was forced to step ___.|down|up;down;off;out|step down = להתפטר.
+She has a ___ for languages.|flair|flair;flare;flavor;flour|a flair for = כשרון ל-.
+The negotiations reached a ___.|stalemate|stalemate;checkmate;standpoint;standing|stalemate = מבוי סתום.
+The evidence ___ to his guilt.|points|shows;points;leads;proves|point to = להצביע על.
+She is widely ___ as an expert.|regarded|regarded;considered of;thought;seen like|be regarded as.
+By no means ___ the task easy.|was|it was;was;is it;it is|By no means = היפוך.
+The project fell ___ due to lack of interest.|through|apart;through;off;down|fall through = לא להתממש.
+In ___ of the facts, we changed our plan.|light|view of;light;sight;spite|in light of = לאור.
+It's high time the government ___ action.|took|takes;took;take;has taken|It's high time + עבר.
+I'm ___ two minds about it.|in|of;in;on;at|be in two minds = להתלבט.
+Little ___ that his life was about to change.|did he realize|he realized;did he realize;he did realize;realized he|Little בהתחלה = היפוך.
+The decision was made ___ consulting the staff.|without|without;unless;except;apart|without + ing.
+Only after the meeting ___ the truth.|did I learn|I learned;did I learn;I did learn;learned I|Only after בהתחלה = היפוך.
+Such ___ the noise that nobody could sleep.|was|is;was;were;it was|Such was... that.
+Should you ___ any questions, contact us.|have|had;have;having;to have|Should you = If you.
+His success was ___ to luck rather than skill.|attributable|attributable;contributing;due of;owed by|attributable to = נובע מ-.
+The scandal ___ his reputation irreversibly.|tarnished|polished;tarnished;boosted;restored|tarnish = להכתים.
+The data, ___ they are, support the hypothesis.|limited as|as limited;limited as;limiting as;limited like|תואר + as + they are = אף על פי ש...`
+};
+(function(){
+ const have=new Set(WORDS.map(w=>w.en.toLowerCase()));
+ for(const l of LEVELS)for(const line of (MORE_WORDS[l]||'').split('\n')){const [en,he,ex,tag]=line.split('|');if(!en||have.has(en.toLowerCase()))continue;have.add(en.toLowerCase());WORDS.push({en,he,ex,tag:tag||'daily',lvl:l});}
+ const haveC=new Set(CLOZE.map(c=>c.s));
+ for(const l of LEVELS)for(const line of (MORE_CLOZE[l]||'').split('\n')){const p=line.split('|');if(p.length<4||haveC.has(p[0]))continue;const o=p[2].split(';');if(!o.includes(p[1])||!p[0].includes('___'))continue;haveC.add(p[0]);CLOZE.push({lvl:l,s:p[0],a:p[1],o,h:p.slice(3).join('|')});}
+})();
+
 /* ====================== STATE ====================== */
 const LOGO="data:image/png;base64,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";
 const KEY='speakup.v1';/* Tuki */
@@ -268,7 +769,20 @@ function defaultState(){return{v:1,level:'A1',placementDone:false,xp:0,streak:0,
 function merge(o){const d=defaultState();const s=Object.assign(d,o||{});s.settings=Object.assign(defaultState().settings,s.settings||{});s.stats=Object.assign(defaultState().stats,s.stats||{});s.custom=Object.assign(defaultState().custom,s.custom||{});return s;}
 let S=defaultState();
 try{const t=localStorage.getItem(KEY);if(t)S=merge(JSON.parse(t));}catch(e){}
-function save(){S.updatedAt=now();try{localStorage.setItem(KEY,JSON.stringify(S));}catch(e){}}
+/* --- שמירה כפולה במכשיר: localStorage + IndexedDB --- */
+function idb(){return new Promise((res,rej)=>{try{const r=indexedDB.open('tuki',1);r.onupgradeneeded=()=>r.result.createObjectStore('kv');r.onsuccess=()=>res(r.result);r.onerror=()=>rej(r.error);}catch(e){rej(e);}});}
+async function idbSet(k,v){try{const d=await idb();d.transaction('kv','readwrite').objectStore('kv').put(v,k);}catch(e){}}
+async function idbGet(k){try{const d=await idb();return await new Promise(res=>{const q=d.transaction('kv').objectStore('kv').get(k);q.onsuccess=()=>res(q.result);q.onerror=()=>res(null);});}catch(e){return null;}}
+let idbTimer=null;
+function save(){S.updatedAt=now();const j=JSON.stringify(S);try{localStorage.setItem(KEY,j);}catch(e){}clearTimeout(idbTimer);idbTimer=setTimeout(()=>idbSet(KEY,j),300);}
+function saveNow(){const j=JSON.stringify(S);try{localStorage.setItem(KEY,j);}catch(e){}idbSet(KEY,j);}
+addEventListener('pagehide',saveNow);document.addEventListener('visibilitychange',()=>{if(document.hidden)saveNow();});
+try{navigator.storage&&navigator.storage.persist&&navigator.storage.persist();}catch(e){}
+async function restoreBackup(){
+ const j=await idbGet(KEY);if(!j){if(S.updatedAt)idbSet(KEY,JSON.stringify(S));return;}
+ try{const o=JSON.parse(j);if((o.updatedAt||0)>(S.updatedAt||0)){S=merge(o);try{localStorage.setItem(KEY,j);}catch(e){}renderTop();if(currentView==='home'||currentView==='welcome')home();}}catch(e){}}
+const encBackup=()=>btoa(unescape(encodeURIComponent(JSON.stringify(S))));
+const decBackup=t=>JSON.parse(decodeURIComponent(escape(atob(String(t).trim().replace(/\s+/g,'')))));
 
 /* ====================== CONFIG ======================
    PROXY_URL: כתובת שרת ה-AI של Tuki (למשל Cloudflare Worker).
@@ -286,17 +800,19 @@ function pickVoice(){
  const pref=[/Samantha/i,/Google US English/i,/Microsoft (Aria|Jenny|Guy).*Online/i,/Alex/i,/Daniel/i];
  for(const p of pref){const v=voices.find(v=>p.test(v.name));if(v)return v;}
  return voices.find(v=>/en[-_]US/i.test(v.lang))||voices[0]||null;}
-function speak(text,slow){
- if(!text)return;
- try{if(!('speechSynthesis' in window)){toast('הקראה לא זמינה בדפדפן הזה');return;}
+function speak(text,slow,onend){
+ if(!text){onend&&onend();return;}
+ let done=false;const fin=()=>{if(done)return;done=true;onend&&onend();};
+ try{if(!('speechSynthesis' in window)){if(!onend)toast('הקראה לא זמינה בדפדפן הזה');fin();return;}
   speechSynthesis.cancel();const u=new SpeechSynthesisUtterance(text);u.lang='en-US';u.rate=slow?0.7:S.settings.rate;
   const v=pickVoice();if(v){u.voice=v;u.lang=v.lang;}
-  speechSynthesis.speak(u);}catch(e){}}
+  if(onend){u.onend=fin;u.onerror=fin;setTimeout(fin,Math.max(2500,text.length*95/(u.rate||1))+1500);}
+  speechSynthesis.speak(u);}catch(e){fin();}}
 function stopSpeak(){try{speechSynthesis.cancel();}catch(e){}}
 
 /* ====================== SPEECH IN (browser) ====================== */
 const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
-let dictCap=SR?{}:null,curRec=null,lastAlts=[];
+let dictCap=SR?{}:null,curRec=null,lastAlts=[],lastConf=0;
 function refreshCaps(){document.body.classList.toggle('has-mic',!!dictCap);document.body.classList.toggle('has-ai',aiReady());}
 function stopListen(){if(curRec){try{curRec.abort();}catch(e){}curRec=null;}}
 function toggleListen(btn,onPartial,onDone){
@@ -304,15 +820,15 @@ function toggleListen(btn,onPartial,onDone){
  if(curRec){try{curRec.stop();}catch(e){}return;}
  stopSpeak();
  const r=new SR();r.lang='en-US';r.interimResults=true;r.continuous=false;r.maxAlternatives=4;
- const label=btn.innerHTML;let fin='',alts=[],denied=false;curRec=r;
+ const label=btn.innerHTML;let fin='',alts=[],confs=[],denied=false;curRec=r;
  btn.classList.add('rec');btn.innerHTML='⏹ מקשיב... לחץ לסיום';
- r.onresult=e=>{let interim='';fin='';alts=[];
+ r.onresult=e=>{let interim='';fin='';alts=[];confs=[];
   for(let i=0;i<e.results.length;i++){const res=e.results[i];
-   if(res.isFinal){fin+=res[0].transcript+' ';for(let k=0;k<res.length;k++)alts.push(res[k].transcript);}else interim+=res[0].transcript;}
+   if(res.isFinal){fin+=res[0].transcript+' ';if(res[0].confidence>0)confs.push(res[0].confidence);for(let k=0;k<res.length;k++)alts.push(res[k].transcript);}else interim+=res[0].transcript;}
   onPartial((fin+interim).trim());};
  r.onerror=e=>{if(e.error==='not-allowed'||e.error==='service-not-allowed'){denied=true;toast('צריך לאשר גישה למיקרופון בדפדפן');}
   else if(e.error==='network')toast('זיהוי הדיבור צריך חיבור לאינטרנט');};
- r.onend=()=>{if(curRec===r)curRec=null;btn.classList.remove('rec');btn.innerHTML=label;lastAlts=alts;if(!denied)onDone(fin.trim());};
+ r.onend=()=>{if(curRec===r)curRec=null;btn.classList.remove('rec');btn.innerHTML=label;lastAlts=alts;lastConf=confs.length?confs.reduce((a,b)=>a+b,0)/confs.length:0;if(!denied)onDone(fin.trim());};
  try{r.start();}catch(e){curRec=null;btn.classList.remove('rec');btn.innerHTML=label;toast('לא הצלחתי להפעיל את המיקרופון, נסו שוב');}
 }
 function micUI(el,onDone){
@@ -382,7 +898,7 @@ function wordDiff(target,given){
  const dp=Array.from({length:m+1},()=>new Array(n+1).fill(0));
  for(let i=m-1;i>=0;i--)for(let j=n-1;j>=0;j--)dp[i][j]=Tw[i]===G[j]?dp[i+1][j+1]+1:Math.max(dp[i+1][j],dp[i][j+1]);
  const hit=new Array(m).fill(false);let i=0,j=0;while(i<m&&j<n){if(Tw[i]===G[j]){hit[i]=true;i++;j++;}else if(dp[i+1][j]>=dp[i][j+1])i++;else j++;}
- return{ratio:m?dp[0][0]/Math.max(m,n):0,html:Tw.map((w,k)=>`<span class="${hit[k]?'w-ok':'w-miss'}">${esc(w)}</span>`).join(' ')};}
+ return{ratio:m?dp[0][0]/Math.max(m,n):0,html:Tw.map((w,k)=>`<span class="${hit[k]?'w-ok':'w-miss'}" data-say="${esc(w)}" style="cursor:pointer">${esc(w)}</span>`).join(' ')};}
 function saidWord(heard,target){if(lastAlts.length&&lastAlts.some(a=>a!==heard&&saidWord1(a,target)))return true;return saidWord1(heard,target);}
 function saidWord1(heard,target){const h=normEn(heard),t=normEn(target);if(!h)return false;if(h===t||(' '+h+' ').includes(' '+t+' '))return true;return h.split(' ').some(w=>sim(w,t)>=0.8)||sim(h,t)>=0.8;}
 
@@ -403,7 +919,7 @@ function addXP(n){
  if(S.lastDay!==t){S.streak=(S.lastDay===dayKey(-1))?S.streak+1:1;S.lastDay=t;}
  const before=S.todayXP;S.xp+=n;S.todayXP+=n;S.history[t]=(S.history[t]||0)+n;
  if(before<S.goal&&S.todayXP>=S.goal)setTimeout(()=>toast('🎉 השלמת את היעד היומי! כל הכבוד'),400);
- save();renderTop();}
+ save();renderTop();syncClass();}
 function record(skill,ok,lvl,info){
  const st=S.stats[skill]||(S.stats[skill]=[0,0]);st[1]++;if(ok)st[0]++;
  if(lvl&&lvl===S.level){S.recent.push(ok?1:0);if(S.recent.length>16)S.recent.shift();adapt();}
@@ -430,29 +946,35 @@ function renderTop(){
 
 /* ====================== HOME ====================== */
 const MODULES=[
+ {id:'bagrut',icon:'🎓',t:'מסלול בגרות',d:()=>'מילים, הבנת הנקרא, קישור'},
+ {id:'psycho',icon:'🧠',t:'פסיכומטרי / אמי"ר',d:()=>'השלמה, ניסוח מחדש, קריאה'},
+ {id:'daily',icon:'⚡',t:'תרגול משולב',d:()=>'10 שאלות מכל הסוגים'},
  {id:'vocab',icon:'📚',t:'אוצר מילים',d:()=>{const n=dueCount();return n?`${n} מילים מחכות לחזרה`:'מילים חדשות + חזרה חכמה';}},
  {id:'cloze',icon:'🧩',t:'השלמת משפטים',d:()=>'דקדוק ומילים בהקשר'},
  {id:'trans',icon:'🔁',t:'תרגום',d:()=>'עברית ⇄ אנגלית'},
  {id:'dict',icon:'🎧',t:'הכתבה',d:()=>'שומעים וכותבים'},
  {id:'pairs',icon:'👂',t:'הגייה',d:()=>'ship או sheep?'},
- {id:'shadow',icon:'🦜',t:'Shadowing',d:()=>'שומעים וחוזרים בקול'},
+ {id:'shadow',icon:'🦜',t:'ציון הגייה',d:()=>'חוזרים על משפט ומקבלים ציון'},
  {id:'tutor',icon:'💬',t:'שיחה עם המורה',d:()=>'תרחישים מהחיים, בקול'},
  {id:'write',icon:'📝',t:'תיקון כתיבה',d:()=>'כותבים ומקבלים תיקון'},
  {id:'stories',icon:'📖',t:'סיפורים',d:()=>'לוחצים על מילה ומקבלים תרגום'},
  {id:'topic',icon:'✨',t:'מילים לפי נושא',d:()=>'טיסה, מסעדה, ראיון ועוד'},
  {id:'tips',icon:'💡',t:'טיפים לדוברי עברית',d:()=>'הטעויות הנפוצות שלנו'},
  {id:'mistakes',icon:'📒',t:'מחברת טעויות',d:()=>`${S.mistakes.length} פריטים לתרגול`},
- {id:'progress',icon:'📈',t:'ההתקדמות שלי',d:()=>`${learnedCount()} מילים נלמדו`}
+ {id:'progress',icon:'📈',t:'ההתקדמות שלי',d:()=>`${learnedCount()} מילים נלמדו`},
+ {id:'teacher',icon:'👩‍🏫',t:'לוח מורה',d:()=>'כיתות ומעקב תלמידים'}
 ];
 function wordOfDay(){const ws=WORDS.filter(w=>w.lvl===S.level);const k=dayKey();let h=0;for(const c of k)h=(h*31+c.charCodeAt(0))>>>0;return ws[h%ws.length];}
 function home(){
  if(!S.placementDone)return welcome();
- const g=todayXP(),pct=Math.min(1,g/S.goal),C=2*Math.PI*32,w=wordOfDay(),inDeck=!!S.words[w.en];
+ const g=todayXP(),pct=Math.min(1,g/S.goal),C=2*Math.PI*32,w=wordOfDay(),inDeck=!!S.words[w.en],P=pathInfo();
  view(`<div class="stack">
  <div class="card hero"><div class="hero-row">
   <div class="ring"><svg width="74" height="74" viewBox="0 0 74 74"><circle cx="37" cy="37" r="32" fill="none" stroke="rgba(255,255,255,.25)" stroke-width="7"/><circle cx="37" cy="37" r="32" fill="none" stroke="#fff" stroke-width="7" stroke-linecap="round" stroke-dasharray="${C}" stroke-dashoffset="${C*(1-pct)}"/></svg><b>${Math.round(pct*100)}%</b></div>
-  <div style="flex:1;min-width:180px"><h1 style="margin:0">${g>=S.goal?'יעד הושלם! 🎉':'שיעור היום'}</h1><div class="muted">רמה ${S.level} · ${LVL_HE[S.level]} · ${g}/${S.goal} XP היום</div></div>
-  <button class="btn light" onclick="open_('daily')">⚡ התחל תרגול משולב</button></div></div>
+  <div style="flex:1;min-width:180px"><h1 style="margin:0">${P.n>PATH_LEN?'סיימת את המסלול! 🏆':`שיעור ${P.n} מתוך ${PATH_LEN}`}</h1><div class="muted">${P.last===dayKey()?'✅ השיעור של היום הושלם · ':''}רמה ${S.level} · ${g}/${S.goal} XP היום</div>
+  <div style="height:8px;background:rgba(255,255,255,.25);border-radius:9px;margin-top:8px;overflow:hidden"><i style="display:block;height:100%;width:${Math.min(100,(P.n-1)/PATH_LEN*100)}%;background:#fff;border-radius:9px"></i></div></div>
+  <button class="btn light" onclick="open_('path')">${P.last===dayKey()?'▶️ עוד שיעור':'▶️ התחל שיעור'}</button></div></div>
+ ${S.cls&&S.cls.message?`<div class="note">📣 <b>הודעה מהמורה:</b> ${esc(S.cls.message)}</div>`:''}
  <div class="card"><div class="small muted" style="margin-bottom:6px">⭐ מילת היום</div><div class="wotd"><span class="w en">${esc(w.en)}</span>${spk(w.en)}<span style="font-size:18px">${esc(w.he)}</span>
  <span style="margin-inline-start:auto"></span>${inDeck?'<span class="pill">✓ ברשימה שלך</span>':`<button class="btn ghost" id="addw">➕ הוסף לתרגול</button>`}</div>
  <div class="ex en muted" style="justify-content:flex-start;margin-top:6px">${esc(w.ex)} ${spk(w.ex,'sm')}</div></div>
@@ -469,8 +991,9 @@ function welcome(){
 function setLevel(l){S.level=l;S.placementDone=true;S.recent=[];save();renderTop();home();}
 
 function open_(id){
- const map={daily:startDaily,vocab:()=>startVocab(),cloze:startCloze,trans:startTrans,dict:startDict,pairs:startPairs,shadow:startShadow,
+ const map={path:startPath,bagrut:()=>trackHome('bagrut'),psycho:()=>trackHome('psycho'),teacher:teacherHome,daily:startDaily,vocab:()=>startVocab(),cloze:startCloze,trans:startTrans,dict:startDict,pairs:startPairs,shadow:startShadow,
   tutor:tutorHome,write:writeHome,stories:storiesHome,topic:topicHome,tips:tipsView,mistakes:mistakesView,progress:progressView,settings:settingsView};
+ if(String(id).startsWith('track-')){const [,t,k]=id.split('-');return k==='reading'?readingList(t):runSession({title:`${TRACKS[t].icon} ${TRACKS[t].parts.find(p=>p[0]===k)[2]}`,kind:id,skill:k==='vocab'?'vocab':'grammar',items:trackItems(t,k)});}
  (map[id]||home)();}
 
 /* ====================== PLACEMENT ====================== */
@@ -491,13 +1014,13 @@ function startPlacement(){
 
 /* ====================== SESSION RUNNER ====================== */
 const PRAISE=['מעולה! ✓','כל הכבוד! ✓','בדיוק! ✓','יפה מאוד! ✓','מצוין! ✓'];
-function runSession({title,items,kind,skill}){
+function runSession({title,items,kind,skill,onDone}){
  const ses={i:0,ok:0,n:items.length,xp:0,answered:0};
  if(!ses.n){view(`<div class="card stack"><h2>${title}</h2><p>אין כרגע פריטים לתרגול כאן.</p><button class="btn primary" onclick="home()">חזרה</button></div>`);return;}
- const summary=()=>{const pct=ses.answered?Math.round(ses.ok/ses.answered*100):100;
+ const summary=()=>{const pct=ses.answered?Math.round(ses.ok/ses.answered*100):100;if(onDone){try{onDone(ses);}catch(e){}}
   view(`<div class="card stack" style="text-align:center"><div style="font-size:54px">${pct>=80?'🏆':pct>=50?'👏':'💪'}</div><h1>סיימת!</h1>
   <p style="font-size:18px">${ses.ok} מתוך ${ses.answered} נכונות · <b>+${ses.xp} XP</b></p>
-  <div class="row" style="justify-content:center"><button class="btn primary" id="again">עוד סבב</button><button class="btn ghost" onclick="home()">לבית</button></div>
+  <div class="row" style="justify-content:center"><button class="btn primary" id="again">${kind==='path'?(S.path&&S.path.n>PATH_LEN?'🏆 סיום':'לשיעור הבא ←'):'עוד סבב'}</button><button class="btn ghost" onclick="home()">לבית</button></div>
   ${(kind==='cloze'||kind==='trans')?`<div class="needs-ai" style="justify-content:center"><button class="btn accent" id="moreai">✨ צור לי תרגילים חדשים עם AI</button></div>`:''}
   </div>`);
   $('#again').onclick=()=>open_(kind);const m=$('#moreai');if(m)m.onclick=()=>aiMore(kind,m);};
@@ -616,14 +1139,6 @@ function makePairQ(p,mode){
   <div style="text-align:center" id="say"><button class="mic">🎤 לחץ ודבר</button><div class="heard"></div></div>`;
   let tries=0;micUI($('#say',el),t=>{tries++;const n=normEn(t);const ok=saidWord(t,target)&&!(' '+n+' ').includes(' '+other+' ');
    if(ok||tries>=2)ans(ok,{correct:target,given:t,extra});else $('.heard',el).innerHTML=`שמעתי: <span class="en">${esc(t)}</span> – נסה שוב`;});}};}
-function makeShadowQ(sent,lvl){return{lvl,skill:'speaking',render(el,ans){
- el.innerHTML=`<p class="muted" style="text-align:center">1. הקשב &nbsp; 2. חזור על המשפט בקול, באותו קצב ומנגינה</p><div class="sentence en">${esc(sent)}</div>
- <div class="prompt" style="padding:6px">${spk(sent)}${spkSlow(sent)}</div><div style="text-align:center" id="say"><button class="mic">🎤 עכשיו אתה</button><div class="heard en"></div></div>`;
- setTimeout(()=>speak(sent),300);let tries=0;
- micUI($('#say',el),t=>{tries++;const d=wordDiff(sent,t);const ok=d.ratio>=0.75;
-  if(ok||tries>=2)ans(ok,{kind:'shadow',correct:sent,given:t,almost:ok&&d.ratio<1,extra:`<div class="diff en">${d.html}</div><div class="small muted">ירוק – נשמע ברור. אדום – כדאי לתרגל שוב.</div>`});
-  else $('.heard',el).innerHTML=`<div class="diff">${d.html}</div><div class="small" style="direction:rtl">כמעט! נסה עוד פעם 🎯</div>`;});}};}
-
 /* ====================== MODULE STARTERS ====================== */
 function vocabItems(n=10,only){
  const t=now(),li=lvlIdx(S.level);
@@ -743,12 +1258,14 @@ function tutorHome(){
 function startChat(id){
  const sc=SCENARIOS.find(s=>s.id===id);chat={sc,msgs:[],busy:false,step:0,ok:0,offline:!aiReady()};
  view(`<div class="ses-head"><button class="iconbtn" onclick="tutorHome()">→</button><h2 style="margin:0;font-size:18px">${sc.icon} ${sc.he}</h2>
- <label class="small muted" style="margin-inline-start:auto;display:flex;gap:6px;align-items:center"><input type="checkbox" id="autos" ${S.settings.autoSpeak?'checked':''}> הקראה אוטומטית</label></div>
+ <button class="btn ghost small needs-mic" id="vmode" style="margin-inline-start:auto;padding:6px 12px">🎙️ שיחה קולית</button>
+ <label class="small muted" style="display:flex;gap:6px;align-items:center"><input type="checkbox" id="autos" ${S.settings.autoSpeak?'checked':''}> הקראה</label></div>
  <div class="chat" id="chat"></div>
  <div class="chatbar" id="cbar"><button class="mic needs-mic" id="cmic" style="padding:11px 14px">🎤</button><input class="inp en" id="cin" placeholder="Write in English..." autocomplete="off"><button class="btn primary" id="csend">שלח</button></div>`,'chat');
  $('#autos').onchange=e=>{S.settings.autoSpeak=e.target.checked;save();};
+ $('#vmode').onclick=()=>setVoice(!chat.voice);
  const cin=$('#cin');$('#csend').onclick=()=>sendChat();cin.onkeydown=e=>{if(e.key==='Enter'){e.preventDefault();sendChat();}};
- const mb=$('#cmic');mb.onclick=()=>toggleListen(mb,t=>{cin.value=t;},t=>{if(t){cin.value=t;sendChat();}});
+ const mb=$('#cmic');mb.onclick=()=>toggleListen(mb,t=>{cin.value=t;},t=>{if(t){cin.value=t;sendChat();}else if(chat&&chat.voice)toast('לא שמעתי 🙉 לחצו על 🎤 ודברו שוב');});
  if(chat.offline)scriptTurn();else tutorTurn();}
 function addTutorMsg(text,he,sample){
  const box=$('#chat');if(!box)return;
@@ -758,7 +1275,7 @@ function addTutorMsg(text,he,sample){
  const tb=m.querySelector('.tbtn');if(tb)tb.onclick=()=>{const t=m.querySelector('.tr:not(.samp)');t.hidden=!t.hidden;};
  const sb=m.querySelector('.sbtn');if(sb)sb.onclick=()=>{const t=m.querySelector('.samp');t.hidden=!t.hidden;};
  box.appendChild(m);m.scrollIntoView({block:'end',behavior:'smooth'});
- if(S.settings.autoSpeak)speak(text);}
+ if(chat&&chat.voice)speak(text,false,()=>setTimeout(voiceListen,250));else if(S.settings.autoSpeak)speak(text);}
 function addCorrection(res){
  const box=$('#chat');const c=document.createElement('div');c.className='corr';
  if(!res.mistakes.length){c.style.background='var(--good-soft)';c.style.borderColor='#bfe5c9';c.innerHTML=res.online?'👍 מעולה, בלי טעויות!':'👍 לא מצאתי טעויות';}
@@ -963,7 +1480,12 @@ function settingsView(){
  <details class="small"><summary class="muted">מתקדם</summary><label class="set">מודל<input class="inp en" id="amodel" style="max-width:220px;font-size:14px;padding:8px" value="${esc(S.settings.aiModel)}"></label></details>
  <div class="row"><button class="btn primary" id="asave">שמור ובדוק</button><span id="ares" class="small"></span></div>
  <p class="small muted" style="margin:0">המפתח נשמר רק במכשיר הזה.</p></div>`}
- <div class="note">ההתקדמות שלך נשמרת אוטומטית במכשיר הזה.</div></div>`,'settings');
+ ${classCard()}
+ <div class="card stack"><h3>💾 ההתקדמות שלי</h3>
+ <p class="small" style="margin:0">ההתקדמות נשמרת אוטומטית בטלפון. כדי להעביר אותה למכשיר אחר (או מ-Safari לאייקון במסך הבית): מעתיקים את קוד הגיבוי, ובמכשיר השני מדביקים אותו כאן ולוחצים "שחזר".</p>
+ <div class="row"><button class="btn primary" id="bkcopy">📋 העתק קוד גיבוי</button></div>
+ <textarea class="inp en" id="bktext" style="min-height:70px;font-size:12px" placeholder="הדביקו כאן קוד גיבוי..."></textarea>
+ <div class="row"><button class="btn ghost" id="bkload">♻️ שחזר מהקוד</button><span id="bkres" class="small"></span></div></div></div>`,'settings');
  $('#sg').onchange=e=>{S.goal=+e.target.value;save();renderTop();};
  $('#sr').onchange=e=>{S.settings.rate=+e.target.value;save();};
  $('#sv').onchange=e=>{S.settings.voiceName=e.target.value;save();speak("Hello! Let's practice English together.");};
@@ -976,10 +1498,307 @@ function settingsView(){
   try{const r=await ai('Return only this JSON: {"ok": true}');res.innerHTML=r&&r.ok?'<span style="color:var(--good)">✅ מחובר! אפשר להשתמש בכל תכונות ה-AI</span>':'⚠️ התקבלה תשובה לא צפויה';}
   catch(e){res.innerHTML='<span style="color:var(--bad)">❌ '+({bad_key:'המפתח לא תקין',bad_model:'המודל לא נמצא',rate_limited:'יותר מדי בקשות, נסו בעוד דקה',network:'אין חיבור לאינטרנט'}[e&&e.code]||'החיבור נכשל')+'</span>';}
   as.disabled=false;};
+ bindClassCard();
+ $('#bkcopy').onclick=async()=>{const code=encBackup();$('#bktext').value=code;try{await navigator.clipboard.writeText(code);$('#bkres').textContent='✅ הקוד הועתק – הדביקו אותו במכשיר השני';}catch(e){$('#bktext').select();$('#bkres').textContent='סמנו את הקוד והעתיקו אותו';}};
+ $('#bkload').onclick=()=>{try{const o=decBackup($('#bktext').value);if(!o||!o.level)throw 0;const keep={aiKey:S.settings.aiKey,aiModel:S.settings.aiModel};S=merge(o);if(!S.settings.aiKey)Object.assign(S.settings,keep);save();saveNow();renderTop();toast('✅ ההתקדמות שוחזרה!');home();}catch(e){$('#bkres').innerHTML='<span style="color:var(--bad)">❌ הקוד לא תקין</span>';}};
  $('#rst').onclick=()=>{const b=$('#rst');b.outerHTML='<span class="row"><span>למחוק הכל?</span><button class="btn accent" id="rst2">כן, אפס</button></span>';$('#rst2').onclick=()=>{const keep={aiKey:S.settings.aiKey,aiModel:S.settings.aiModel};S=defaultState();Object.assign(S.settings,keep);S.updatedAt=now();save();renderTop();welcome();};};}
 
+/* ====================== EXAM TRACKS (Bagrut / Psychometric) ====================== */
+const TRACK_WORDS={
+bagrut:`access|גישה|Students have access to the library.
+achievement|הישג|Graduating was a great achievement.
+affect|להשפיע על|Stress can affect your health.
+aim|מטרה; לשאוף|The aim of the study is clear.
+attract|למשוך|The beach attracts many tourists.
+author|סופר, מחבר|Who is the author of this book?
+aware|מודע|Are you aware of the risks?
+cause|גורם; לגרום|What caused the accident?
+claim|לטעון; טענה|He claims he is innocent.
+community|קהילה|We help our local community.
+condition|מצב; תנאי|The car is in good condition.
+consider|לשקול; להחשיב|Consider all the options.
+contain|להכיל|This drink contains sugar.
+create|ליצור|She created a new website.
+culture|תרבות|I love learning about other cultures.
+data|נתונים|The data shows an increase.
+depend|להיות תלוי|It depends on you.
+discover|לגלות|Scientists discovered a new planet.
+effect|השפעה, תוצאה|The medicine had a quick effect.
+effort|מאמץ|It takes a lot of effort.
+exist|להתקיים|Do aliens exist?
+factor|גורם|Price is an important factor.
+include|לכלול|The price includes breakfast.
+issue|נושא, סוגיה|It's an important issue.
+method|שיטה|This method works well.
+period|תקופה|It was a difficult period.
+positive|חיובי|Stay positive!
+provide|לספק|The school provides books.
+purpose|מטרה, תכלית|What's the purpose of your visit?
+research|מחקר|Research shows that sleep is important.
+result|תוצאה|The results were surprising.
+society|חברה (ציבור)|Technology changes society.
+source|מקור|The sun is a source of energy.
+species|מין (ביולוגי)|Many species are in danger.
+support|תמיכה; לתמוך|Thanks for your support.
+therefore|לכן|It's late; therefore, we'll stop.
+whether|האם|I don't know whether he's coming.
+despite|למרות|Despite the rain, we went out.
+moreover|יתר על כן|It's cheap. Moreover, it's healthy.
+whereas|בעוד ש-|He likes sports, whereas I prefer music.`,
+psycho:`abolish|לבטל (חוק)|Slavery was abolished in 1865.
+adverse|שלילי, מזיק|The drug has adverse effects.
+alleviate|להקל|The medicine alleviates pain.
+ambiguous|דו-משמעי|The question was ambiguous.
+anomaly|חריגה|The result was an anomaly.
+apparent|נראה לעין; לכאורה|For no apparent reason, he left.
+augment|להגדיל|They augmented their income.
+benevolent|נדיב, טוב לב|A benevolent king ruled the land.
+candid|גלוי לב|Thank you for your candid answer.
+cease|לחדול|The rain finally ceased.
+coerce|לכפות|He was coerced into signing.
+commence|להתחיל|The ceremony will commence soon.
+compel|לאלץ|The law compels drivers to wear seatbelts.
+comply|לציית|All staff must comply with the rules.
+conceal|להסתיר|She concealed her feelings.
+concur|להסכים|I concur with your opinion.
+consensus|הסכמה כללית|They reached a consensus.
+deceive|להונות|Don't deceive yourself.
+deficient|חסר, לקוי|The diet is deficient in vitamins.
+detrimental|מזיק|Smoking is detrimental to health.
+diligent|חרוץ|She is a diligent student.
+dubious|מפוקפק|The claim is dubious.
+eminent|נודע, בולט|An eminent professor gave the lecture.
+erroneous|שגוי|It was an erroneous assumption.
+evade|להתחמק|He evaded the question.
+explicit|מפורש|The instructions were explicit.
+fluctuate|לתנוד, להשתנות|Prices fluctuate daily.
+futile|חסר תועלת|It's futile to argue.
+hostile|עוין|It was a hostile environment.
+impair|לפגוע ב-|Alcohol impairs judgment.
+inadvertently|בשוגג|He inadvertently deleted the file.
+indispensable|הכרחי|She's indispensable to the team.
+inhibit|לעכב, לבלום|Fear inhibits learning.
+lenient|מקל, סלחני|The judge was lenient.
+mitigate|למתן|We took steps to mitigate the damage.
+novice|טירון|He's a novice at chess.
+obscure|לא ידוע; מעורפל|He was an obscure writer.
+perpetual|מתמיד, נצחי|The perpetual noise drove me crazy.
+pragmatic|מעשי|We need a pragmatic approach.
+proficient|מיומן|She is proficient in English.
+prohibit|לאסור|Smoking is prohibited here.
+replenish|למלא מחדש|Replenish your water supply.
+resilient|עמיד, בעל חוסן|The economy proved resilient.
+skeptical|ספקן|I'm skeptical about the plan.
+tenacious|עיקש|She's a tenacious fighter.
+transient|חולף, זמני|The pain was transient.
+unanimous|פה אחד|It was a unanimous decision.
+verify|לאמת|Please verify your email.
+volatile|הפכפך, לא יציב|The market is volatile.
+compromise|פשרה; להתפשר|They reached a compromise.`
+};
+const TRACK_LVL={bagrut:'B1',psycho:'C1'};
+for(const t in TRACK_WORDS){const have=new Set(WORDS.map(w=>w.en.toLowerCase()));
+ for(const line of TRACK_WORDS[t].split('\n')){const [en,he,ex]=line.split('|');if(!en)continue;
+  const ex2=WORDS.find(w=>w.en.toLowerCase()===en.toLowerCase());if(ex2){ex2.track=ex2.track||t;continue;}
+  WORDS.push({en,he,ex,lvl:TRACK_LVL[t],tag:'study',track:t});}}
+const PASSAGES=[
+{track:'bagrut',title:'The Four-Day Week',text:"In recent years, several companies around the world have tested a four-day working week. Employees work fewer hours, but they receive the same salary. Supporters claim that workers who have more time to rest are happier and more productive. In one large experiment in Britain, most companies decided to continue with the new model after the trial ended. Workers reported less stress and better sleep, and many companies said that their profits did not fall. However, critics argue that the model does not suit every business. Hospitals, schools and shops, for example, need staff to be present every day. Therefore, experts believe that each organization must find the solution that works best for it.",
+ q:[["What is the main idea of the passage?",["A shorter week helps some workers, but it doesn't fit every workplace","Companies in Britain pay workers less","Hospitals must close one day a week","Workers prefer higher salaries"],0,"הרעיון המרכזי משלב את שני הצדדים: יתרונות, אבל לא מתאים לכולם."],
+ ["What happened after the British experiment?",["Most companies kept the four-day week","All the workers lost their jobs","Profits fell sharply","The government banned the model"],0,"כתוב: most companies decided to continue."],
+ ["Why do critics say the model is not for everyone?",["Some places need staff every day","Workers sleep too much","Salaries are too high","It's illegal in Britain"],0,"Hospitals, schools and shops need staff every day."],
+ ["The word \"Therefore\" in the last sentence introduces...",["a result","a contrast","an example","a time"],0,"Therefore = לכן, מציג תוצאה או מסקנה."]]},
+{track:'bagrut',title:'Plastic in the Ocean',text:"Every year, millions of tons of plastic end up in the ocean. Much of it comes from bottles, bags and packaging that people use only once. Plastic does not disappear; instead, it breaks into tiny pieces called microplastics. Fish and birds often eat these pieces by mistake, and some of the plastic eventually reaches our food. Many countries have started to fight the problem. Some have banned plastic bags, while others encourage recycling by paying people to return bottles. Scientists are also developing new materials that break down naturally. Although these steps are important, experts say that the most effective solution is simple: people need to use less plastic in the first place.",
+ q:[["What are microplastics?",["Tiny pieces of plastic","A type of fish","New natural materials","Plastic bags"],0,"tiny pieces called microplastics."],
+ ["How can plastic reach our food?",["Fish and birds eat it","Farmers use it","It is added to bottles","Scientists put it there"],0,"Fish and birds eat these pieces... reaches our food."],
+ ["Which solution do experts consider the most effective?",["Using less plastic","Paying people for bottles","Banning birds","Building more factories"],0,"the most effective solution... use less plastic."],
+ ["In \"while others encourage recycling\", the word \"while\" shows...",["a contrast between two groups","a reason","a result","a condition"],0,"while כאן = בעוד ש-, ניגוד בין מדינות שונות."]]},
+{track:'bagrut',title:'Learning a Language as an Adult',text:"Many adults believe that it is too late for them to learn a new language. It is true that young children often develop a better accent. However, research shows that adults have important advantages. They already understand how language works, they can use learning strategies, and they are usually more motivated because they have a clear goal, such as a new job or a trip abroad. The key to success is regular practice. Studying for ten minutes every day is more effective than studying for two hours once a week. Speaking is especially important: learners who are not afraid to make mistakes usually progress faster than those who wait until they feel 'ready'.",
+ q:[["What does the writer think about adults learning languages?",["They can succeed and have some advantages","It is too late for them","They always have a better accent than children","They should only read"],0,"research shows that adults have important advantages."],
+ ["Which is more effective, according to the passage?",["Ten minutes every day","Two hours once a week","Studying only before a trip","Waiting until you feel ready"],0,"ten minutes every day is more effective."],
+ ["Who progresses faster?",["Learners who aren't afraid of mistakes","Learners who wait until they're ready","Children who study once a week","Adults without goals"],0,"learners who are not afraid to make mistakes."],
+ ["What is the purpose of the passage?",["To encourage adults to learn languages","To compare accents","To sell a course","To criticize children"],0,"הכותב מעודד מבוגרים ומראה שזה אפשרי."]]},
+{track:'psycho',title:'Sleep and Memory',text:"For decades, scientists assumed that sleep was simply a period of rest for the brain. Recent studies, however, suggest that sleep plays an active role in forming memories. During deep sleep, the brain appears to replay information acquired during the day, transferring it from short-term to long-term storage. In one experiment, participants who slept after learning a list of words remembered significantly more of them than those who stayed awake. Interestingly, the benefit was greatest for information that participants had been told they would need later. Researchers therefore conclude that the brain does not store everything equally; rather, it prioritizes what it expects to be useful.",
+ q:[["What did scientists previously believe about sleep?",["It was only a time of rest for the brain","It was harmful to memory","It replays daily information","It prioritizes useful information"],0,"scientists assumed that sleep was simply a period of rest."],
+ ["According to the passage, what happens during deep sleep?",["Information moves to long-term memory","The brain stops working","New words are created","Short-term memory is erased"],0,"transferring it from short-term to long-term storage."],
+ ["Which information benefited most from sleep?",["Information people expected to need later","Lists of long words","Information learned at night","Information people had forgotten"],0,"the benefit was greatest for information... they would need later."],
+ ["The word \"rather\" in the last sentence introduces...",["a contrasting idea","an example","a result","a time sequence"],0,"rather = אלא; מציג רעיון מנוגד."]]},
+{track:'psycho',title:'The Paradox of Choice',text:"It seems logical that having more options makes people happier. Yet a growing body of research points to the opposite conclusion. In a well-known study, shoppers who were offered six types of jam were far more likely to buy one than those who were offered twenty-four. Psychologists suggest that an abundance of choice can be paralyzing: people fear making the wrong decision and therefore postpone deciding altogether. Moreover, even when they do choose, they are often less satisfied, since they cannot help imagining that one of the rejected alternatives might have been better. Some researchers caution, however, that the effect is not universal and depends largely on how familiar people are with the products.",
+ q:[["What is the main claim of the passage?",["Too many options can make decisions harder and less satisfying","People always prefer more choice","Jam is the most popular product","Shoppers never buy anything"],0,"הטענה המרכזית: שפע אפשרויות יכול לשתק ולהפחית שביעות רצון."],
+ ["Why might people postpone a decision?",["They fear choosing wrongly","They don't like jam","They have no money","They are too familiar with the products"],0,"people fear making the wrong decision."],
+ ["What limitation do some researchers mention?",["The effect depends on familiarity with the products","The study used too few shoppers","Jam is not a real product","The effect is universal"],0,"the effect is not universal and depends on familiarity."],
+ ["The word \"Moreover\" introduces...",["an additional point","a contrast","an example","a conclusion"],0,"Moreover = יתר על כן; מוסיף נקודה."]]}
+];
+const PSYCHO_COMPLETE=`Despite the ___ evidence against him, the jury found him innocent.|overwhelming|overwhelming;scarce;irrelevant;ambiguous|"למרות ראיות מכריעות" – לכן הזיכוי מפתיע.
+The theory was ___ by later experiments, which confirmed every prediction.|validated|refuted;validated;ignored;abandoned|הניסויים אישרו כל תחזית ← התיאוריה אומתה.
+Because the instructions were so ___, nobody knew what to do.|vague|explicit;vague;concise;detailed|אף אחד לא ידע מה לעשות ← ההוראות היו מעורפלות.
+The manager was ___ about the plan at first, but eventually she supported it.|skeptical|enthusiastic;skeptical;certain;proud|"בהתחלה... אבל בסוף תמכה" ← ניגוד: ספקנית.
+Water is ___ in the desert, so plants there store it carefully.|scarce|abundant;scarce;hostile;visible|הצמחים שומרים מים בקפידה ← המים נדירים.
+His ___ attitude made him popular; he was always willing to help.|generous|hostile;generous;arrogant;indifferent|תמיד מוכן לעזור ← נדיב.
+The old law was ___ after the public protested against it.|abolished|enforced;abolished;extended;praised|אחרי מחאה ← החוק בוטל.
+The two leaders reached a ___, and the war finally ended.|compromise|conflict;compromise;deadline;dispute|המלחמה הסתיימה ← הגיעו לפשרה.
+She is so ___ that she never gives up, even when things get hard.|persistent|persistent;fragile;careless;reluctant|אף פעם לא מוותרת ← מתמידה.
+The effects of the medicine were ___; the pain returned after an hour.|temporary|permanent;temporary;severe;invisible|הכאב חזר אחרי שעה ← השפעה זמנית.
+Unlike his ___ brother, Tom is shy and quiet.|outgoing|outgoing;timid;silent;modest|Unlike + ביישן ← האח הוא ההפך: חברותי.
+The report was criticized for being ___; it ignored many important facts.|incomplete|thorough;incomplete;accurate;lengthy|התעלם מעובדות ← לא שלם.
+To ___ the risk of fire, the building has many alarms.|reduce|increase;reduce;ignore;create|אזעקות נועדו להפחית סיכון.
+The ancient city remained ___ for centuries, until archaeologists found it in 1911.|hidden|famous;hidden;crowded;destroyed|"עד שנמצאה" ← הייתה נסתרת.
+Although the task seemed simple, it turned out to be extremely ___.|complicated|easy;complicated;boring;brief|Although + פשוטה ← ניגוד: מסובכת.
+The company's profits ___ sharply this year, so many workers lost their jobs.|declined|rose;declined;doubled;stabilized|עובדים פוטרו ← הרווחים ירדו.
+The lecture was so ___ that several students fell asleep.|tedious|fascinating;tedious;brief;lively|נרדמו ← משעממת.
+Scientists remain ___ about the exact cause; more research is needed.|uncertain|confident;uncertain;unanimous;aware|צריך עוד מחקר ← לא בטוחים.
+The witness's account was ___ with the evidence, so the police believed her.|consistent|consistent;inconsistent;irrelevant;unrelated|המשטרה האמינה ← העדות תואמת.
+Good leaders ___ their teams by setting a personal example.|inspire|discourage;inspire;neglect;confuse|דוגמה אישית ← מעוררים השראה.`.split('\n').map(l=>{const p=l.split('|');return{lvl:'C1',s:p[0],a:p[1],o:p[2].split(';'),h:p[3],track:'psycho'};});
+const RESTATE=[
+["Hardly anyone attended the meeting.",["Very few people came to the meeting","Many people found the meeting hard","Everyone attended the meeting","The meeting was hard to find"],"hardly anyone = כמעט אף אחד."],
+["The plan is by no means perfect.",["The plan is far from perfect","The plan is perfect in every way","There is no plan at all","The plan has no meaning"],"by no means = בשום אופן לא."],
+["She couldn't help laughing at the joke.",["She couldn't stop herself from laughing","She didn't help anyone laugh","She refused to laugh","Nobody helped her understand the joke"],"couldn't help + ing = לא יכלה להתאפק."],
+["Unless you hurry, you'll miss the train.",["If you don't hurry, you'll miss the train","You'll miss the train even if you hurry","You don't need to hurry","Hurrying will make you miss the train"],"unless = if not."],
+["No sooner had he arrived than it started raining.",["It started raining as soon as he arrived","He arrived after the rain stopped","It never rained after he arrived","He arrived because it was raining"],"No sooner... than = מיד אחרי ש..."],
+["The results fell short of our expectations.",["The results were worse than we expected","The results were better than expected","We expected short results","The results were exactly as expected"],"fall short of = לא להגיע לרמה המצופה."],
+["Few people are aware of this problem.",["Not many people know about this problem","Many people ignore the problem","The problem is very small","Nobody cares about anything"],"few = מעט (כמעט לא)."],
+["He is anything but lazy.",["He is not lazy at all","He is very lazy","He is lazy about everything","He does anything lazily"],"anything but = כל דבר חוץ מ-, כלומר בכלל לא."],
+["The museum is closed to the public for renovations.",["Visitors can't enter because the museum is being repaired","The museum is near a public park","The public renovated the museum","The museum opens only for renovations"],"closed to the public = סגור למבקרים."],
+["It was not until midnight that the guests left.",["The guests left only at midnight","The guests left before midnight","The guests didn't leave at all","The guests arrived at midnight"],"not until X = רק ב-X."],
+["Her success is largely due to hard work.",["She succeeded mainly because she worked hard","Her success made her work hard","She worked hard but didn't succeed","Her success was large but late"],"largely due to = בעיקר בזכות."],
+["The rule applies to all employees, regardless of their position.",["Every employee must follow the rule, whatever their job","Only managers must follow the rule","Employees can choose whether to follow it","The rule changes according to position"],"regardless of = בלי קשר ל-."]
+];
+function makeMCQ({q,o,a,explain,lvl,skill,passage,title,prompt}){
+ return{lvl,skill:skill||'grammar',render(el,ans){
+  const order=shuffle(o.map((_,i)=>i));
+  el.innerHTML=`${passage?`<details class="explain" ${prompt?'':'open'}><summary><b class="en">${esc(title||'')}</b> · הטקסט ${spk(passage,'sm')}</summary><div class="en" style="margin-top:8px;line-height:1.8;font-size:16px">${esc(passage)}</div></details>`:''}
+  <p class="muted" style="text-align:center">${esc(prompt||'בחרו את התשובה הנכונה')}</p><div class="en" style="font-size:19px;font-weight:600;text-align:center;padding:10px 4px">${esc(q)}</div>
+  <div class="opts">${order.map((k,i)=>`<button class="opt en" data-i="${i}">${esc(o[k])}</button>`).join('')}</div>`;
+  $$('.opt',el).forEach(b=>b.onclick=()=>{const i=+b.dataset.i,ok=order[i]===a;lockOpts(el,order.indexOf(a),i);ans(ok,{kind:'mcq',correct:o[a],given:o[order[i]],explain});});}};}
+function trackItems(t,kind){
+ if(kind==='vocab')return vocabItems(10,shuffle(WORDS.filter(w=>w.track===t)).slice(0,10));
+ if(kind==='complete')return shuffle(PSYCHO_COMPLETE).slice(0,8).map(c=>()=>makeClozeQ(c));
+ if(kind==='restate')return shuffle(RESTATE).slice(0,6).map(([q,o,h])=>()=>makeMCQ({q,o,a:0,explain:h,lvl:'C1',prompt:'איזה משפט הכי קרוב במשמעות?'}));
+ if(kind==='cloze')return shuffle(CLOZE.filter(c=>c.lvl==='B1'||c.lvl==='A2')).slice(0,10).map(c=>()=>makeClozeQ(c));
+ return[];}
+function passageItems(p){return p.q.map(([q,o,a,h])=>()=>makeMCQ({q,o,a,explain:h,lvl:p.track==='psycho'?'C1':'B1',skill:'listening',passage:p.text,title:p.title}));}
+const TRACKS={
+bagrut:{icon:'🎓',he:'מסלול בגרות',sub:'אוצר מילים, הבנת הנקרא ומילות קישור',parts:[['vocab','📚','אוצר מילים לבגרות'],['cloze','🧩','דקדוק ומילות קישור'],['reading','📖','הבנת הנקרא']]},
+psycho:{icon:'🧠',he:'מסלול פסיכומטרי / אמי"ר',sub:'מילים קשות, השלמת משפטים וניסוח מחדש',parts:[['vocab','📚','אוצר מילים מתקדם'],['complete','🧩','השלמת משפטים'],['restate','🔄','ניסוח מחדש'],['reading','📖','הבנת הנקרא']]}
+};
+function trackHome(t){
+ const T=TRACKS[t];const ws=WORDS.filter(w=>w.track===t);const learned=ws.filter(w=>S.words[w.en]&&S.words[w.en].box>=3).length;
+ view(`<div class="stack"><div class="ses-head"><button class="iconbtn" onclick="home()">→</button><h2 style="margin:0">${T.icon} ${T.he}</h2></div>
+ <p class="muted" style="margin-top:-6px">${T.sub}</p>
+ <div class="card"><div class="row"><span>מילים שנלמדו</span><div class="sbar"><i style="width:${learned/ws.length*100}%"></i></div><b>${learned}/${ws.length}</b></div></div>
+ <div class="grid">${T.parts.map(([k,ic,name])=>`<button class="mod" data-part="${k}"><span class="ic">${ic}</span><span class="t">${name}</span></button>`).join('')}</div></div>`,'track');
+ $$('[data-part]').forEach(b=>b.onclick=()=>{const k=b.dataset.part;
+  if(k==='reading')return readingList(t);
+  runSession({title:`${T.icon} ${T.parts.find(p=>p[0]===k)[2]}`,kind:'track-'+t+'-'+k,skill:k==='vocab'?'vocab':'grammar',items:trackItems(t,k)});});}
+function readingList(t){
+ const ps=PASSAGES.filter(p=>p.track===t);
+ view(`<div class="stack"><div class="ses-head"><button class="iconbtn" onclick="trackHome('${t}')">→</button><h2 style="margin:0">📖 הבנת הנקרא</h2></div>
+ ${ps.map((p,i)=>`<button class="mod" style="min-height:70px" data-p="${PASSAGES.indexOf(p)}"><span class="t en" style="text-align:right">${esc(p.title)}</span><span class="d">${p.q.length} שאלות</span></button>`).join('')}</div>`,'reading');
+ $$('[data-p]').forEach(b=>b.onclick=()=>{const p=PASSAGES[+b.dataset.p];runSession({title:'📖 '+p.title,kind:'track-'+t+'-reading',skill:'listening',items:passageItems(p)});});}
+
+/* ====================== DAILY PATH (60 lessons) ====================== */
+const PATH_LEN=60;
+function pathInfo(){if(!S.path)S.path={n:1,last:null,history:[]};return S.path;}
+function pathItems(){
+ const P=pathInfo(),n=P.n,L=S.level;
+ const base=WORDS.filter(w=>w.lvl===L&&!w.track&&w.tag!=='topic');
+ const per=5,start=((n-1)*per)%Math.max(base.length,1);
+ let fresh=base.slice(start,start+per).filter(w=>!S.words[w.en]);
+ if(fresh.length<3)fresh=fresh.concat(shuffle(base.filter(w=>!S.words[w.en]&&!fresh.includes(w))).slice(0,3-fresh.length));
+ const due=allWords().filter(w=>S.words[w.en]&&S.words[w.en].due<=now()&&!fresh.includes(w)).slice(0,3);
+ const cz=CLOZE.filter(c=>c.lvl===L);const cs=cz.length?[0,1,2].map(i=>cz[((n-1)*3+i)%cz.length]):[];
+ const tr=fromLevel(transPool(),L);const ts=tr.length?[0,1].map(i=>tr[((n-1)*2+i)%tr.length]):[];
+ const dp=dictPool(L);
+ const quiz=[...fresh.map(w=>()=>makeVocabQ(w,'mcq')),...due.map(w=>()=>makeVocabQ(w)),...cs.map(c=>()=>makeClozeQ(c)),...ts.map(t=>()=>makeTransQ(t)),
+  ()=>makeDictQ(dp[(n*7)%dp.length],L),()=>makePairQ(PAIRS[n%PAIRS.length])];
+ return fresh.map(w=>()=>makeVocabQ(w,'intro')).concat(shuffle(quiz));}
+function startPath(){
+ const P=pathInfo();
+ if(P.n>PATH_LEN){view(`<div class="card stack" style="text-align:center"><div style="font-size:60px">🏆</div><h1>סיימת את כל 60 השיעורים!</h1><p>כל הכבוד! אפשר להתחיל מסלול חדש ברמה הבאה.</p><button class="btn primary" id="rp">התחל מסלול חדש</button><button class="btn ghost" onclick="home()">לבית</button></div>`);
+  $('#rp').onclick=()=>{S.path={n:1,last:null,history:[]};save();startPath();};return;}
+ const n=P.n;
+ runSession({title:`📅 שיעור ${n} מתוך ${PATH_LEN}`,kind:'path',skill:'vocab',items:pathItems(),onDone:()=>{P.history.push({n,d:dayKey()});P.n=n+1;P.last=dayKey();addXP(20);save();syncClass(true);}});}
+
+/* ====================== PRONUNCIATION SCORE ====================== */
+function pronScore(target,heard){const d=wordDiff(target,heard);const conf=lastConf>0?lastConf:d.ratio;return{score:Math.max(0,Math.min(100,Math.round(100*(0.8*d.ratio+0.2*conf)))),html:d.html};}
+function scoreBadge(sc){const c=sc>=85?'var(--good)':sc>=60?'#c47f12':'var(--bad)';
+ return `<div style="font-size:44px;font-weight:800;color:${c};text-align:center;line-height:1.1">${sc}<span style="font-size:18px">/100</span></div><div style="text-align:center" class="small">${sc>=85?'הגייה מצוינת! 🌟':sc>=60?'טוב מאוד, עוד קצת תרגול 💪':'בואו ננסה שוב 🎯'}</div>`;}
+function makeShadowQ(sent,lvl){return{lvl,skill:'speaking',render(el,ans){
+ let best=0;
+ el.innerHTML=`<p class="muted" style="text-align:center">1. הקשיבו &nbsp; 2. חזרו על המשפט בקול, באותו קצב ומנגינה</p><div class="sentence en">${esc(sent)}</div>
+ <div class="prompt" style="padding:6px">${spk(sent)}${spkSlow(sent)}</div><div style="text-align:center" id="say"><button class="mic">🎤 עכשיו אתם</button><div class="heard en"></div><div id="pres"></div></div>
+ <div class="fbtn" style="justify-content:center"><button class="btn primary" id="sdone" hidden>המשך ←</button></div>`;
+ setTimeout(()=>speak(sent),300);
+ $('#sdone',el).onclick=()=>ans(best>=75,{kind:'shadow',correct:sent,given:'',explain:`הציון הכי טוב שלך: ${best}/100`});
+ micUI($('#say',el),t=>{const r=pronScore(sent,t);best=Math.max(best,r.score);
+  $('#pres',el).innerHTML=scoreBadge(r.score)+`<div class="diff en" style="margin-top:8px">${r.html}</div><div class="small muted">ירוק – נשמע ברור · אדום – כדאי לתרגל. לחצו על מילה כדי לשמוע אותה. אפשר לנסות שוב כמה פעמים שרוצים.</div>`;
+  $('.heard',el).textContent=t;$('#sdone',el).hidden=false;$('.mic',el).innerHTML='🔁 נסו שוב';});}};}
+
+/* ====================== VOICE CONVERSATION ====================== */
+function voiceListen(){if(!chat||!chat.voice||currentView!=='chat'||chat.busy||curRec)return;const mb=$('#cmic');if(mb&&mb.offsetParent!==null)mb.click();}
+function setVoice(on){if(!chat)return;chat.voice=on;const b=$('#vmode');if(b){b.classList.toggle('primary',on);b.classList.toggle('ghost',!on);b.innerHTML=on?'🎙️ שיחה קולית פעילה':'🎙️ שיחה קולית';}
+ if(on){toast('דברו אחרי שהמורה מסיים – הכל אוטומטי');if(!chat.busy)voiceListen();}else{stopListen();}}
+
+/* ====================== CLASS (student) & TEACHER ====================== */
+const API=PROXY_URL;
+async function api(path,body){if(!API)throw{code:'no_server'};let r;
+ try{r=await withTimeout(fetch(API+path,{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(body)}),12000);}catch(e){throw{code:'network'};}
+ let j={};try{j=await r.json();}catch(e){}if(!r.ok)throw{code:j.error||'http'};return j;}
+const CLASS_ERR={no_class:'קוד הכיתה לא נמצא',no_kv:'השרת עוד לא הוגדר לכיתות (צריך לחבר KV ב-Cloudflare)',bad_key:'קוד הניהול לא נכון',no_name:'צריך לכתוב שם',no_server:'אין חיבור לשרת',network:'אין חיבור לאינטרנט',no_student:'התלמיד לא נמצא בכיתה'};
+function classErr(e){toast(CLASS_ERR[e&&e.code]||'משהו השתבש, נסו שוב');}
+function classStats(){const st=S.stats;let ok=0,t=0;for(const k in st){ok+=st[k][0];t+=st[k][1];}let week=0;for(let i=0;i<7;i++)week+=S.history[dayKey(-i)]||0;
+ return{lvl:S.level,xp:S.xp,streak:computeStreak(),words:learnedCount(),lessons:(S.path?S.path.n-1:0),acc:t?Math.round(ok/t*100):0,week};}
+let lastSync=0;
+async function syncClass(force){if(!S.cls||!API)return;if(!force&&now()-lastSync<10*60e3)return;lastSync=now();
+ try{const r=await api('/class/progress',{code:S.cls.code,id:S.cls.id,data:classStats()});
+  if((r.message||'')!==(S.cls.message||'')){S.cls.message=r.message||'';save();if(currentView==='home')home();}}
+ catch(e){if(e&&(e.code==='no_student'||e.code==='no_class')){S.cls=null;save();}}}
+function classCard(){
+ if(S.cls)return `<div class="card stack"><h3>🏫 הכיתה שלי</h3><p style="margin:0">את/ה בכיתה <b>${esc(S.cls.name)}</b> בשם <b>${esc(S.cls.me)}</b>. המורה רואה את ההתקדמות שלך.</p><div class="row"><button class="btn ghost" id="clsync">🔄 עדכן עכשיו</button><button class="btn ghost" id="clleave" style="color:var(--bad)">יציאה מהכיתה</button></div></div>`;
+ return `<div class="card stack"><h3>🏫 הצטרפות לכיתה</h3><p class="small" style="margin:0">קיבלת קוד מהמורה? הצטרפו כדי שהמורה יראה את ההתקדמות שלכם.</p>
+ <div class="row"><input class="inp en" id="clcode" placeholder="קוד כיתה" style="flex:1;min-width:120px;text-transform:uppercase"><input class="inp" id="clname" placeholder="השם שלך" style="flex:1;min-width:120px"></div>
+ <button class="btn primary" id="cljoin">הצטרפות</button></div>`;}
+function bindClassCard(){
+ const j=$('#cljoin');if(j)j.onclick=async()=>{const code=$('#clcode').value.trim().toUpperCase(),name=$('#clname').value.trim();if(!code||!name){toast('צריך קוד ושם');return;}
+  j.disabled=true;j.innerHTML='<span class="loader"></span>';
+  try{const r=await api('/class/join',{code,name});S.cls={code,id:r.id,name:r.className,me:name,message:r.message||''};save();await syncClass(true);toast('🎉 הצטרפת לכיתה!');settingsView();}
+  catch(e){classErr(e);j.disabled=false;j.textContent='הצטרפות';}};
+ const s=$('#clsync');if(s)s.onclick=async()=>{await syncClass(true);toast('עודכן ✓');};
+ const l=$('#clleave');if(l)l.onclick=()=>{l.outerHTML='<span class="row"><span>לצאת מהכיתה?</span><button class="btn accent" id="clleave2">כן</button></span>';$('#clleave2').onclick=()=>{S.cls=null;save();settingsView();};};}
+function fmtAgo(ts){if(!ts)return'—';const m=Math.round((now()-ts)/60000);if(m<2)return'עכשיו';if(m<60)return`לפני ${m} דק׳`;const h=Math.round(m/60);if(h<24)return`לפני ${h} שע׳`;const d=Math.round(h/24);return d===1?'אתמול':`לפני ${d} ימים`;}
+function teacherHome(){
+ S.teach=S.teach||[];
+ view(`<div class="stack"><h2>👩‍🏫 לוח מורה</h2><p class="muted" style="margin-top:-8px">יוצרים כיתה, משתפים את הקוד עם התלמידים, ורואים את ההתקדמות של כולם במקום אחד.</p>
+ <div class="card stack"><h3>➕ כיתה חדשה</h3><div class="row"><input class="inp" id="tcname" placeholder="שם הכיתה, למשל: י׳3 אנגלית" style="flex:1"><button class="btn primary" id="tccreate">צור כיתה</button></div></div>
+ ${S.teach.length?`<div class="card stack"><h3>הכיתות שלי</h3>${S.teach.map(c=>`<button class="mod" style="min-height:64px" data-cls="${esc(c.code)}"><span class="t">${esc(c.name)}</span><span class="d en">קוד: ${esc(c.code)}</span></button>`).join('')}</div>`:''}
+ <details class="card"><summary class="small">יש לך כיתה ממכשיר אחר? הוספה עם קוד ניהול</summary><div class="row" style="margin-top:10px"><input class="inp en" id="tccode" placeholder="קוד כיתה" style="flex:1"><input class="inp en" id="tckey" placeholder="קוד ניהול" style="flex:1"><button class="btn ghost" id="tcadd">הוסף</button></div></details>
+ <div class="note">התלמידים מצטרפים בתוך האפליקציה: ⚙️ הגדרות ← הצטרפות לכיתה, עם הקוד ששלחתם.</div></div>`,'teacher');
+ $('#tccreate').onclick=async()=>{const name=$('#tcname').value.trim();if(!name){toast('תנו שם לכיתה');return;}const b=$('#tccreate');b.disabled=true;b.innerHTML='<span class="loader"></span>';
+  try{const r=await api('/class/create',{name});S.teach.push({code:r.code,key:r.key,name:r.name});save();openClass(r.code);}catch(e){classErr(e);b.disabled=false;b.textContent='צור כיתה';}};
+ $$('[data-cls]').forEach(b=>b.onclick=()=>openClass(b.dataset.cls));
+ $('#tcadd').onclick=async()=>{const code=$('#tccode').value.trim().toUpperCase(),key=$('#tckey').value.trim();if(!code||!key)return;
+  try{const r=await api('/class/view',{code,key});S.teach.push({code,key,name:r.name});save();openClass(code);}catch(e){classErr(e);}};}
+async function openClass(code){
+ const c=(S.teach||[]).find(x=>x.code===code);if(!c)return teacherHome();
+ view(`<div class="card"><span class="loader"></span> טוען את הכיתה...</div>`,'class');
+ let r;try{r=await api('/class/view',{code,key:c.key});}catch(e){classErr(e);return teacherHome();}
+ const st=(r.students||[]).sort((a,b)=>(b.week||0)-(a.week||0));
+ const site=location.origin+location.pathname;
+ const share=`הצטרפו לכיתה "${r.name}" ב-Tuki 🦜\n1. היכנסו ל: ${site}\n2. ⚙️ הגדרות ← הצטרפות לכיתה\n3. קוד הכיתה: ${code}`;
+ view(`<div class="stack"><div class="ses-head"><button class="iconbtn" onclick="teacherHome()">→</button><h2 style="margin:0">🏫 ${esc(r.name)}</h2><button class="btn ghost small" id="crf" style="margin-inline-start:auto">🔄 רענון</button></div>
+ <div class="card stack"><div class="row"><span>קוד הכיתה:</span><b class="en" style="font-size:28px;letter-spacing:3px">${esc(code)}</b><button class="btn primary" id="cshare">📋 העתק הזמנה לתלמידים</button></div>
+ <details class="small"><summary class="muted">קוד ניהול (שמרו אותו כדי לפתוח את הכיתה ממכשיר אחר)</summary><div class="en" style="margin-top:6px;user-select:all">${esc(c.key)}</div></details></div>
+ <div class="card stack"><h3>📣 הודעה / משימה לכיתה</h3><textarea class="inp" id="cmsg" style="min-height:70px" placeholder="למשל: עד יום ראשון – 3 שיעורים במסלול היומי">${esc(r.message||'')}</textarea><div class="row"><button class="btn ghost" id="cmsave">שמור ושלח לכיתה</button></div></div>
+ <div class="card"><h3>👥 תלמידים (${st.length})</h3>${st.length?`<div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:14px;min-width:560px">
+ <tr style="text-align:start;color:var(--muted)"><th style="text-align:start;padding:6px">שם</th><th>רמה</th><th>XP השבוע</th><th>XP כולל</th><th>🔥 רצף</th><th>מילים</th><th>שיעורים</th><th>דיוק</th><th>פעילות</th><th></th></tr>
+ ${st.map(s=>`<tr style="border-top:1px solid var(--line);text-align:center"><td style="text-align:start;padding:8px 6px"><b>${esc(s.name||'?')}</b></td><td>${esc(s.lvl||'—')}</td><td><b>${s.week||0}</b></td><td>${s.xp||0}</td><td>${s.streak||0}</td><td>${s.words||0}</td><td>${s.lessons||0}</td><td>${s.acc||0}%</td><td class="small">${fmtAgo(s.last)}</td><td><button class="iconbtn" title="הסר" data-rm="${esc(s.id)}" style="font-size:14px">✕</button></td></tr>`).join('')}</table></div>`:'<p class="muted">עוד אין תלמידים. שלחו להם את ההזמנה 👆</p>'}</div>
+ <p class="small muted">הנתונים מתעדכנים כשהתלמידים מתרגלים (עד כמה דקות עיכוב).</p></div>`,'class');
+ $('#crf').onclick=()=>openClass(code);
+ $('#cshare').onclick=async()=>{try{await navigator.clipboard.writeText(share);toast('✅ ההזמנה הועתקה – הדביקו בוואטסאפ של הכיתה');}catch(e){toast('קוד הכיתה: '+code);}};
+ $('#cmsave').onclick=async()=>{try{await api('/class/message',{code,key:c.key,message:$('#cmsg').value.trim()});toast('✅ ההודעה נשלחה לכיתה');}catch(e){classErr(e);}};
+ $$('[data-rm]').forEach(b=>b.onclick=async()=>{if(b.dataset.armed){try{await api('/class/remove',{code,key:c.key,id:b.dataset.rm});openClass(code);}catch(e){classErr(e);}}else{b.dataset.armed=1;b.textContent='בטוח?';b.style.color='var(--bad)';}});}
+
 /* ====================== BOOT ====================== */
-refreshCaps();renderTop();home();
+refreshCaps();renderTop();home();restoreBackup();setTimeout(()=>syncClass(true),3000);
 </script>
 </body>
 </html>

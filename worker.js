@@ -1,0 +1,128 @@
+// Tuki server – Cloudflare Worker
+// 1. AI למורה, לתיקון כתיבה ועוד (Gemini) – המפתח נשאר כאן בסוד.
+// 2. כיתות ולוח מורה – נשמרים ב-Cloudflare KV.
+//
+// הגדרות ב-Cloudflare (Settings → Variables and Secrets):
+//   GEMINI_KEY      (Secret)  – המפתח מ-aistudio.google.com/apikey
+//   ALLOWED_ORIGIN  (Text)    – https://ctcvyf8fbp-maker.github.io
+//   MODEL           (Text, לא חובה) – ברירת מחדל: gemini-flash-latest
+// Bindings:
+//   TUKI_KV         (KV namespace) – בשביל כיתות ולוח מורה
+
+export default {
+  async fetch(req, env) {
+    const origin = req.headers.get('Origin') || '';
+    const allowed = env.ALLOWED_ORIGIN || '*';
+    const cors = {
+      'Access-Control-Allow-Origin': allowed === '*' ? '*' : allowed,
+      'Access-Control-Allow-Methods': 'POST, OPTIONS',
+      'Access-Control-Allow-Headers': 'content-type',
+      'Vary': 'Origin',
+    };
+    const json = (obj, status = 200) =>
+      new Response(JSON.stringify(obj), { status, headers: { ...cors, 'content-type': 'application/json' } });
+
+    if (req.method === 'OPTIONS') return new Response(null, { headers: cors });
+    if (req.method !== 'POST') return json({ ok: true, name: 'Tuki AI', classes: !!env.TUKI_KV });
+    if (allowed !== '*' && origin !== allowed) return json({ error: 'origin' }, 403);
+
+    let body;
+    try { body = await req.json(); } catch { return json({ error: 'bad_json' }, 400); }
+
+    const path = new URL(req.url).pathname;
+    if (path.startsWith('/class')) return classApi(path, body || {}, env, json);
+
+    // ---- AI ----
+    const prompt = body && body.prompt;
+    if (typeof prompt !== 'string' || !prompt || prompt.length > 12000) return json({ error: 'bad_prompt' }, 400);
+    const model = env.MODEL || 'gemini-flash-latest';
+    const r = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json', 'x-goog-api-key': env.GEMINI_KEY },
+      body: JSON.stringify({
+        contents: [{ role: 'user', parts: [{ text: prompt }] }],
+        generationConfig: { responseMimeType: 'application/json', temperature: 0.7 },
+      }),
+    });
+    if (!r.ok) return json({ error: 'upstream', status: r.status }, r.status === 429 ? 429 : 502);
+    const j = await r.json();
+    const text = (j.candidates?.[0]?.content?.parts || []).map(p => p.text || '').join('');
+    return json({ text });
+  },
+};
+
+// ---------------- Classes ----------------
+const CODE_ABC = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+const ID_ABC = 'abcdefghijkmnpqrstuvwxyz23456789';
+function rnd(n, abc) {
+  const a = crypto.getRandomValues(new Uint8Array(n));
+  return [...a].map(x => abc[x % abc.length]).join('');
+}
+const clean = (s, n) => String(s ?? '').slice(0, n).trim();
+const num = v => Math.max(0, Math.min(1e9, Math.round(+v || 0)));
+
+async function classApi(path, b, env, json) {
+  const KV = env.TUKI_KV;
+  if (!KV) return json({ error: 'no_kv' }, 500);
+
+  if (path === '/class/create') {
+    const name = clean(b.name, 60) || 'My class';
+    let code = '';
+    for (let i = 0; i < 6; i++) { code = rnd(6, CODE_ABC); if (!(await KV.get('class:' + code))) break; }
+    const key = rnd(24, ID_ABC);
+    await KV.put('class:' + code, JSON.stringify({ name, key, message: '', created: Date.now() }));
+    return json({ code, key, name });
+  }
+
+  const code = clean(b.code, 10).toUpperCase();
+  const raw = code && (await KV.get('class:' + code));
+  if (!raw) return json({ error: 'no_class' }, 404);
+  const cls = JSON.parse(raw);
+
+  if (path === '/class/join') {
+    const name = clean(b.name, 40);
+    if (!name) return json({ error: 'no_name' }, 400);
+    const id = rnd(12, ID_ABC);
+    await KV.put(`s:${code}:${id}`, '1', { metadata: { name, joined: Date.now(), last: Date.now() } });
+    return json({ id, className: cls.name, message: cls.message || '' });
+  }
+
+  if (path === '/class/progress') {
+    const id = clean(b.id, 20);
+    const k = `s:${code}:${id}`;
+    const cur = await KV.getWithMetadata(k);
+    if (!cur || cur.value === null) return json({ error: 'no_student' }, 404);
+    const d = b.data || {};
+    const m = cur.metadata || {};
+    await KV.put(k, '1', { metadata: {
+      name: m.name || '?', joined: m.joined || Date.now(), last: Date.now(),
+      lvl: clean(d.lvl, 3), xp: num(d.xp), streak: num(d.streak), words: num(d.words),
+      lessons: num(d.lessons), acc: Math.min(100, num(d.acc)), week: num(d.week),
+    } });
+    return json({ ok: true, className: cls.name, message: cls.message || '' });
+  }
+
+  // ---- teacher only ----
+  if (cls.key !== clean(b.key, 40)) return json({ error: 'bad_key' }, 403);
+
+  if (path === '/class/view') {
+    const students = [];
+    let cursor;
+    do {
+      const list = await KV.list({ prefix: `s:${code}:`, cursor });
+      for (const k of list.keys) students.push({ id: k.name.split(':')[2], ...(k.metadata || {}) });
+      cursor = list.list_complete ? null : list.cursor;
+    } while (cursor);
+    return json({ name: cls.name, message: cls.message || '', students });
+  }
+  if (path === '/class/message') {
+    cls.message = clean(b.message, 300);
+    await KV.put('class:' + code, JSON.stringify(cls));
+    return json({ ok: true });
+  }
+  if (path === '/class/remove') {
+    await KV.delete(`s:${code}:${clean(b.id, 20)}`);
+    return json({ ok: true });
+  }
+  return json({ error: 'not_found' }, 404);
+}
