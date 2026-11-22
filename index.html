@@ -262,104 +262,108 @@ const KEY='speakup.v1';/* Tuki */
 const DAY=864e5, now=()=>Date.now();
 const dayKey=(off=0)=>{const d=new Date(Date.now()+off*DAY);return d.getFullYear()+'-'+(d.getMonth()+1)+'-'+d.getDate();};
 function defaultState(){return{v:1,level:'A1',placementDone:false,xp:0,streak:0,lastDay:null,todayXP:0,xpDay:null,history:{},goal:100,
- settings:{rate:1,voice:'buttery',autoSpeak:true},words:{},
+ settings:{rate:1,voiceName:'',autoSpeak:true,aiKey:'',aiModel:'gemini-flash-latest'},words:{},
  stats:{vocab:[0,0],grammar:[0,0],translate:[0,0],listening:[0,0],speaking:[0,0],writing:[0,0]},
  recent:[],mistakes:[],custom:{words:[],cloze:[],trans:[]},updatedAt:0};}
 function merge(o){const d=defaultState();const s=Object.assign(d,o||{});s.settings=Object.assign(defaultState().settings,s.settings||{});s.stats=Object.assign(defaultState().stats,s.stats||{});s.custom=Object.assign(defaultState().custom,s.custom||{});return s;}
 let S=defaultState();
 try{const t=localStorage.getItem(KEY);if(t)S=merge(JSON.parse(t));}catch(e){}
-let dbRef=null,saveTimer=null,writing=false,pendingWrite=false;
-function save(){S.updatedAt=now();try{localStorage.setItem(KEY,JSON.stringify(S));}catch(e){}clearTimeout(saveTimer);saveTimer=setTimeout(pushDb,1500);}
-async function pushDb(){if(!dbRef)return;if(writing){pendingWrite=true;return;}writing=true;
- try{await dbRef.set({json:JSON.stringify(S),updatedAt:S.updatedAt});}catch(e){console.warn('db write',e);}
- writing=false;if(pendingWrite){pendingWrite=false;pushDb();}}
-function snapData(s){if(!s)return null;if(typeof s.data==='function')return s.data();if(s.exists===false)return null;if(s.data&&typeof s.data==='object')return s.data;return s;}
-const withTimeout=(p,ms)=>Promise.race([p,new Promise((_,r)=>setTimeout(()=>r(new Error('timeout')),ms))]);
+function save(){S.updatedAt=now();try{localStorage.setItem(KEY,JSON.stringify(S));}catch(e){}}
 
-/* ====================== CAPABILITIES ====================== */
-let ttsCap=null,dictCap=null,sampleCap=null,aiState='pending';
-function refreshCaps(){document.body.classList.toggle('has-mic',!!dictCap);document.body.classList.toggle('has-ai',!!sampleCap);}
-function initCaps(tries=0){
- if(!(window.claude&&typeof window.claude.use==='function')){if(tries<20)setTimeout(()=>initCaps(tries+1),250);else aiState='none';return;}
- const c=window.claude;
- c.use('tts').then(t=>{ttsCap=t;if(t&&t.onState)t.onState(()=>{});}).catch(()=>{});
- c.use('dictation').then(d=>{dictCap=d;if(d)wireDictation(d);refreshCaps();}).catch(()=>{});
- c.use('sample').then(s=>{sampleCap=s;aiState=s?'ok':'none';refreshCaps();}).catch(()=>{aiState='none';});
- initDb(c);
-}
-async function initDb(c){
- try{const [db,user]=await Promise.all([c.use('db'),c.use('user')]);if(!db||!user)return;
-  const id=await withTimeout(Promise.resolve(user.id()),10000);if(!id)return;
-  const ref=db.collection('data/users/'+id).doc('state');
-  const d=snapData(await withTimeout(ref.get(),10000));
-  if(d&&d.json&&(d.updatedAt||0)>(S.updatedAt||0)){
-   S=merge(JSON.parse(d.json));try{localStorage.setItem(KEY,JSON.stringify(S));}catch(e){}
-   renderTop();if(currentView==='home'||currentView==='welcome')home();
-  }
-  dbRef=ref;if(!d||(d.updatedAt||0)<(S.updatedAt||0))pushDb();
- }catch(e){console.warn('db',e);}
-}
+/* ====================== CONFIG ======================
+   PROXY_URL: כתובת שרת ה-AI של Tuki (למשל Cloudflare Worker).
+   כשהיא מוגדרת – כל המשתמשים מקבלים AI בלי להגדיר כלום.
+   כשהיא ריקה – אפשר להדביק מפתח Gemini אישי בהגדרות. */
+const PROXY_URL='https://tuki-ai.yuvalmitrani00.workers.dev';
 
-/* speech out */
+/* ====================== SPEECH OUT (browser) ====================== */
+let voices=[];
+function loadVoices(){try{voices=speechSynthesis.getVoices().filter(v=>/^en/i.test(v.lang));}catch(e){voices=[];}}
+try{loadVoices();speechSynthesis.onvoiceschanged=loadVoices;}catch(e){}
+function pickVoice(){
+ if(!voices.length)loadVoices();
+ const byName=S.settings.voiceName&&voices.find(v=>v.name===S.settings.voiceName);if(byName)return byName;
+ const pref=[/Samantha/i,/Google US English/i,/Microsoft (Aria|Jenny|Guy).*Online/i,/Alex/i,/Daniel/i];
+ for(const p of pref){const v=voices.find(v=>p.test(v.name));if(v)return v;}
+ return voices.find(v=>/en[-_]US/i.test(v.lang))||voices[0]||null;}
 function speak(text,slow){
- if(!text)return;const rate=slow?0.7:S.settings.rate;
- if(ttsCap){ttsCap.speak(text,{language:'en',rate,voice:S.settings.voice}).catch(e=>{
-   if(e&&(e.code==='not_granted'))ttsCap=null;
-   if(e&&(e.code==='busy'||e.code==='viewer_stopped'))return;
-   if(!e||e.code!=='busy')browserSpeak(text,rate);});return;}
- browserSpeak(text,rate);
-}
-function browserSpeak(text,rate){
+ if(!text)return;
  try{if(!('speechSynthesis' in window)){toast('הקראה לא זמינה בדפדפן הזה');return;}
-  speechSynthesis.cancel();const u=new SpeechSynthesisUtterance(text);u.lang='en-US';u.rate=rate;
-  const v=speechSynthesis.getVoices().find(v=>/en[-_]US/i.test(v.lang))||speechSynthesis.getVoices().find(v=>/^en/i.test(v.lang));if(v)u.voice=v;
-  speechSynthesis.speak(u);}catch(e){}
-}
-function stopSpeak(){try{ttsCap&&ttsCap.stop&&ttsCap.stop();}catch(e){}try{speechSynthesis.cancel();}catch(e){}}
+  speechSynthesis.cancel();const u=new SpeechSynthesisUtterance(text);u.lang='en-US';u.rate=slow?0.7:S.settings.rate;
+  const v=pickVoice();if(v){u.voice=v;u.lang=v.lang;}
+  speechSynthesis.speak(u);}catch(e){}}
+function stopSpeak(){try{speechSynthesis.cancel();}catch(e){}}
 
-/* speech in */
-let curListen=null;
-function wireDictation(d){
- d.onPartial(({text})=>{if(!curListen)return;clearTimeout(curListen.timer);curListen.partial((curListen.final+' '+text).trim());if(curListen.final)curListen.timer=setTimeout(()=>d.stop().catch(()=>{}),1400);});
- d.onFinal(({text})=>{if(!curListen)return;curListen.final=(curListen.final+' '+text).trim();curListen.partial(curListen.final);clearTimeout(curListen.timer);curListen.timer=setTimeout(()=>d.stop().catch(()=>{}),1100);});
- d.onState(({state,reason})=>{if(!curListen)return;const c=curListen;
-  if(state==='listening'){c.btn.classList.add('rec');c.btn.innerHTML='⏹ מקשיב... לחץ לסיום';}
-  else if(state==='idle'){clearTimeout(c.timer);curListen=null;c.btn.classList.remove('rec');c.btn.innerHTML=c.label;c.done(c.final.trim(),reason);}});
-}
+/* ====================== SPEECH IN (browser) ====================== */
+const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
+let dictCap=SR?{}:null,curRec=null,lastAlts=[];
+function refreshCaps(){document.body.classList.toggle('has-mic',!!dictCap);document.body.classList.toggle('has-ai',aiReady());}
+function stopListen(){if(curRec){try{curRec.abort();}catch(e){}curRec=null;}}
 function toggleListen(btn,onPartial,onDone){
- if(!dictCap){toast('זיהוי דיבור זמין ב-Chrome או באפליקציית Claude למחשב');return;}
- if(curListen){dictCap.stop().catch(()=>{});return;}
+ if(!dictCap){toast('זיהוי דיבור לא נתמך בדפדפן הזה – נסו Chrome או Safari');return;}
+ if(curRec){try{curRec.stop();}catch(e){}return;}
  stopSpeak();
- curListen={btn,label:btn.innerHTML,final:'',partial:onPartial,done:onDone,timer:null};
- dictCap.start().catch(e=>{const c=curListen;curListen=null;if(c){c.btn.classList.remove('rec');c.btn.innerHTML=c.label;}
-  if(e&&e.code==='not_granted'){dictCap=null;refreshCaps();toast('אין הרשאה למיקרופון – אפשר להמשיך בלי דיבור');}
-  else toast('לא הצלחתי להפעיל את המיקרופון, נסה שוב');});
+ const r=new SR();r.lang='en-US';r.interimResults=true;r.continuous=false;r.maxAlternatives=4;
+ const label=btn.innerHTML;let fin='',alts=[],denied=false;curRec=r;
+ btn.classList.add('rec');btn.innerHTML='⏹ מקשיב... לחץ לסיום';
+ r.onresult=e=>{let interim='';fin='';alts=[];
+  for(let i=0;i<e.results.length;i++){const res=e.results[i];
+   if(res.isFinal){fin+=res[0].transcript+' ';for(let k=0;k<res.length;k++)alts.push(res[k].transcript);}else interim+=res[0].transcript;}
+  onPartial((fin+interim).trim());};
+ r.onerror=e=>{if(e.error==='not-allowed'||e.error==='service-not-allowed'){denied=true;toast('צריך לאשר גישה למיקרופון בדפדפן');}
+  else if(e.error==='network')toast('זיהוי הדיבור צריך חיבור לאינטרנט');};
+ r.onend=()=>{if(curRec===r)curRec=null;btn.classList.remove('rec');btn.innerHTML=label;lastAlts=alts;if(!denied)onDone(fin.trim());};
+ try{r.start();}catch(e){curRec=null;btn.classList.remove('rec');btn.innerHTML=label;toast('לא הצלחתי להפעיל את המיקרופון, נסו שוב');}
 }
 function micUI(el,onDone){
  const btn=el.querySelector('.mic'),heard=el.querySelector('.heard');if(!btn)return;
- btn.onclick=()=>toggleListen(btn,t=>{heard.textContent=t;},(t)=>{heard.textContent=t||'(לא נשמע דיבור, נסה שוב)';if(t)onDone(t);});
+ btn.onclick=()=>toggleListen(btn,t=>{heard.textContent=t;},(t)=>{heard.textContent=t||'(לא נשמע דיבור, נסו שוב)';if(t)onDone(t);});
 }
 
-/* AI */
-async function ai(prompt,tier){
- if(!sampleCap)throw{code:'unavailable'};
- return await sampleCap.json(prompt,{modelTier:tier||'quick'});
+/* ====================== AI (Gemini / Tuki server) ====================== */
+const aiReady=()=>!!(PROXY_URL||S.settings.aiKey);
+function parseJSON(t){
+ t=String(t||'').trim().replace(/^```(?:json)?\s*/i,'').replace(/```\s*$/,'').trim();
+ try{return JSON.parse(t);}catch(e){}
+ const a=Math.min(...['{','['].map(c=>{const i=t.indexOf(c);return i<0?1e9:i;})),b=Math.max(t.lastIndexOf('}'),t.lastIndexOf(']'));
+ if(a<1e9&&b>a)return JSON.parse(t.slice(a,b+1));
+ throw{code:'parse'};}
+async function ai(prompt){
+ let r;
+ try{
+  if(PROXY_URL){
+   r=await fetch(PROXY_URL,{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({prompt})});
+   if(!r.ok)throw{code:r.status===429?'rate_limited':'http'};
+   return parseJSON((await r.json()).text);}
+  if(!S.settings.aiKey)throw{code:'unavailable'};
+  const model=(S.settings.aiModel||'gemini-flash-latest').trim();
+  r=await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent`,{method:'POST',
+   headers:{'content-type':'application/json','x-goog-api-key':S.settings.aiKey.trim()},
+   body:JSON.stringify({contents:[{role:'user',parts:[{text:prompt}]}],generationConfig:{responseMimeType:'application/json',temperature:0.7}})});
+  if(!r.ok)throw{code:r.status===429?'rate_limited':(r.status===400||r.status===401||r.status===403)?'bad_key':r.status===404?'bad_model':'http'};
+  const j=await r.json();
+  return parseJSON((j.candidates&&j.candidates[0]&&j.candidates[0].content&&j.candidates[0].content.parts||[]).map(p=>p.text||'').join(''));
+ }catch(e){if(e&&e.code)throw e;throw{code:'network'};}
 }
-function aiErr(e){console.warn(e);
- if(e&&e.code==='not_granted'){sampleCap=null;aiState='none';refreshCaps();toast('הגישה ל-AI לא אושרה');}
- else if(e&&e.code==='rate_limited')toast('יותר מדי בקשות – נסה שוב בעוד דקה');
- else toast('משהו השתבש מול ה-AI, נסה שוב');}
+function aiErr(e){console.warn(e);const c=e&&e.code;
+ if(c==='bad_key')toast('מפתח ה-AI לא תקין – בדקו אותו בהגדרות');
+ else if(c==='bad_model')toast('שם המודל לא נמצא – בדקו בהגדרות');
+ else if(c==='rate_limited')toast('יותר מדי בקשות – נסו שוב בעוד דקה');
+ else if(c==='network')toast('אין חיבור לאינטרנט');
+ else if(c==='unavailable')needAI();
+ else toast('משהו השתבש מול ה-AI, נסו שוב');}
 function needAI(){
- if(sampleCap)return true;
- if(aiState==='pending'){toast('רגע, מתחבר ל-AI...');return false;}
- view(`<div class="card stack"><h2>🤖 תכונה זו משתמשת ב-Claude</h2><p>היא זמינה כשפותחים את האפליקציה ב-claude.ai בחשבון מחובר. בינתיים אפשר להשתמש בכל שאר התרגולים.</p><button class="btn primary" onclick="home()">חזרה לבית</button></div>`);return false;}
+ if(aiReady())return true;
+ view(`<div class="card stack"><h2>🤖 צריך לחבר AI</h2><p>התכונה הזו עובדת עם בינה מלאכותית, שעדיין לא חוברה לאפליקציה.</p>
+ <div class="row"><button class="btn primary" onclick="open_('settings')">⚙️ לחיבור בהגדרות</button><button class="btn ghost" onclick="home()">חזרה לבית</button></div>
+ <p class="small muted">כל שאר התרגולים עובדים גם בלי זה.</p></div>`);return false;}
 
 /* ====================== HELPERS ====================== */
 const $=(s,el=document)=>el.querySelector(s);
 const $$=(s,el=document)=>[...el.querySelectorAll(s)];
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const app=$('#app');let currentView='';
-function view(html,name){currentView=name||'';stopSpeak();if(curListen&&dictCap)dictCap.stop().catch(()=>{});app.innerHTML=html;window.scrollTo(0,0);}
+function view(html,name){currentView=name||'';stopSpeak();stopListen();app.innerHTML=html;window.scrollTo(0,0);}
 let toastT;function toast(m){const t=$('#toast');t.textContent=m;t.classList.add('show');clearTimeout(toastT);toastT=setTimeout(()=>t.classList.remove('show'),2600);}
 const shuffle=a=>{a=a.slice();for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]];}return a;};
 const pick=a=>a[Math.floor(Math.random()*a.length)];
@@ -379,7 +383,8 @@ function wordDiff(target,given){
  for(let i=m-1;i>=0;i--)for(let j=n-1;j>=0;j--)dp[i][j]=Tw[i]===G[j]?dp[i+1][j+1]+1:Math.max(dp[i+1][j],dp[i][j+1]);
  const hit=new Array(m).fill(false);let i=0,j=0;while(i<m&&j<n){if(Tw[i]===G[j]){hit[i]=true;i++;j++;}else if(dp[i+1][j]>=dp[i][j+1])i++;else j++;}
  return{ratio:m?dp[0][0]/Math.max(m,n):0,html:Tw.map((w,k)=>`<span class="${hit[k]?'w-ok':'w-miss'}">${esc(w)}</span>`).join(' ')};}
-function saidWord(heard,target){const h=normEn(heard),t=normEn(target);if(!h)return false;if(h===t||(' '+h+' ').includes(' '+t+' '))return true;return h.split(' ').some(w=>sim(w,t)>=0.8)||sim(h,t)>=0.8;}
+function saidWord(heard,target){if(lastAlts.length&&lastAlts.some(a=>a!==heard&&saidWord1(a,target)))return true;return saidWord1(heard,target);}
+function saidWord1(heard,target){const h=normEn(heard),t=normEn(target);if(!h)return false;if(h===t||(' '+h+' ').includes(' '+t+' '))return true;return h.split(' ').some(w=>sim(w,t)>=0.8)||sim(h,t)>=0.8;}
 
 const allWords=()=>WORDS.concat(S.custom.words);
 const lvlIdx=l=>Math.max(0,LEVELS.indexOf(l));
@@ -431,10 +436,10 @@ const MODULES=[
  {id:'dict',icon:'🎧',t:'הכתבה',d:()=>'שומעים וכותבים'},
  {id:'pairs',icon:'👂',t:'הגייה',d:()=>'ship או sheep?'},
  {id:'shadow',icon:'🦜',t:'Shadowing',d:()=>'שומעים וחוזרים בקול'},
- {id:'tutor',icon:'💬',t:'שיחה עם מורה AI',d:()=>'תרחישים מהחיים, בקול',ai:1},
- {id:'write',icon:'📝',t:'תיקון כתיבה',d:()=>'אתה כותב, ה-AI מתקן',ai:1},
+ {id:'tutor',icon:'💬',t:'שיחה עם המורה',d:()=>'תרחישים מהחיים, בקול'},
+ {id:'write',icon:'📝',t:'תיקון כתיבה',d:()=>'כותבים ומקבלים תיקון'},
  {id:'stories',icon:'📖',t:'סיפורים',d:()=>'לוחצים על מילה ומקבלים תרגום'},
- {id:'topic',icon:'✨',t:'מילים לפי נושא',d:()=>'כל נושא שתבחר',ai:1},
+ {id:'topic',icon:'✨',t:'מילים לפי נושא',d:()=>'טיסה, מסעדה, ראיון ועוד'},
  {id:'tips',icon:'💡',t:'טיפים לדוברי עברית',d:()=>'הטעויות הנפוצות שלנו'},
  {id:'mistakes',icon:'📒',t:'מחברת טעויות',d:()=>`${S.mistakes.length} פריטים לתרגול`},
  {id:'progress',icon:'📈',t:'ההתקדמות שלי',d:()=>`${learnedCount()} מילים נלמדו`}
@@ -644,7 +649,7 @@ function startTrans(){runSession({title:'🔁 תרגום',kind:'trans',skill:'tr
 function startDict(){runSession({title:'🎧 הכתבה',kind:'dict',skill:'listening',items:dictItems(8)});}
 function startPairs(){const ps=shuffle(PAIRS);runSession({title:'👂 הגייה – זוגות מילים',kind:'pairs',skill:'listening',items:ps.slice(0,10).map(p=>()=>makePairQ(p))});}
 function startShadow(){
- if(!dictCap){view(`<div class="card stack"><h2>🦜 Shadowing</h2><p>התרגול הזה צריך מיקרופון. זיהוי דיבור זמין כשפותחים את האפליקציה ב-Chrome או באפליקציית Claude למחשב.</p><p class="muted">בינתיים אפשר לתרגל בלי בדיקה: הקשב למשפט וחזור עליו בקול.</p><div id="sh"></div><button class="btn primary" onclick="home()">חזרה</button></div>`);
+ if(!dictCap){view(`<div class="card stack"><h2>🦜 Shadowing</h2><p>התרגול הזה צריך מיקרופון. זיהוי דיבור לא נתמך בדפדפן הזה. נסו לפתוח את האפליקציה ב-Chrome או ב-Safari.</p><p class="muted">בינתיים אפשר לתרגל בלי בדיקה: הקשב למשפט וחזור עליו בקול.</p><div id="sh"></div><button class="btn primary" onclick="home()">חזרה</button></div>`);
   $('#sh').innerHTML=shuffle(dictPool(S.level)).slice(0,5).map(s=>`<div class="ex en" style="justify-content:flex-start;padding:6px 0">${spk(s,'sm')} ${spkSlow(s)} ${esc(s)}</div>`).join('');return;}
  const used=new Set();runSession({title:'🦜 Shadowing',kind:'shadow',skill:'speaking',items:Array.from({length:6},()=>()=>{const l=pickLevel();const p=dictPool(l).filter(s=>!used.has(s));const s=pick(p);used.add(s);return makeShadowQ(s,l);})});}
 function startDaily(){
@@ -665,73 +670,166 @@ async function aiMore(kind,btn){
    S.custom.trans.push(...ok);save();runSession({title:'🔁 תרגום ✨',kind:'trans',skill:'translate',items:ok.map(t=>()=>makeTransQ(t))});
   }}catch(e){aiErr(e);btn.disabled=false;btn.textContent='✨ נסה שוב';}}
 
-/* ====================== AI TUTOR ====================== */
+/* ====================== GRAMMAR CHECK (works without AI) ====================== */
+const withTimeout=(p,ms)=>Promise.race([p,new Promise((_,r)=>setTimeout(()=>r(new Error('timeout')),ms))]);
+const PAST={go:'went',eat:'ate',see:'saw',buy:'bought',do:'did',have:'had',come:'came',meet:'met',take:'took',make:'made',write:'wrote',drink:'drank',get:'got',is:'was',are:'were',visit:'visited',play:'played',watch:'watched',work:'worked',study:'studied',travel:'traveled',like:'liked',want:'wanted',live:'lived',swim:'swam',fly:'flew',sleep:'slept',buys:'bought',goes:'went',eats:'ate',sees:'saw',has:'had'};
+const BASE={went:'go',saw:'see',ate:'eat',bought:'buy',did:'do',had:'have',came:'come',took:'take',made:'make',got:'get',wrote:'write',drank:'drink',met:'meet',flew:'fly',slept:'sleep',swam:'swim',told:'tell',said:'say',gave:'give',found:'find',left:'leave',thought:'think'};
+const S3=v=>({go:'goes',do:'does',have:'has',study:'studies',watch:'watches',fly:'flies'}[v]||v+'s');
+const NUMW='(?:\\d+|one|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve|fifteen|twenty|thirty|forty|fifty|sixty|seventy)';
+const cap=(src,out)=>/^[A-Z]/.test(src)?out.charAt(0).toUpperCase()+out.slice(1):out;
+const LRULES=[
+ {re:/\bi\b/g,fix:()=>'I',he:'המילה I (אני) נכתבת תמיד באות גדולה.'},
+ {re:/(?<!\b(?:does|did|will|can|would|should|could|must|to|might|may|do|let|make|help|not)\s)\b(he|she|it)\s+(go|do|have|like|want|work|live|need|know|think|play|eat|drink|study|watch|love|speak|come|feel|fly)\b/gi,fix:(m,p,v)=>`${p} ${S3(v.toLowerCase())}`,he:'בהווה פשוט עם he / she / it מוסיפים s לפועל (he works, she goes).'},
+ {re:/\b(I|you|we|they) (wants|likes|goes|needs|loves|works|lives|knows|thinks|plays|has|does|eats|drinks|speaks|studies|watches)\b/gi,fix:(m,p,v)=>{v=v.toLowerCase();const b={has:'have',does:'do',goes:'go',studies:'study',watches:'watch'}[v]||v.replace(/s$/,'');return `${p} ${b}`;},he:'עם I / you / we / they לא מוסיפים s לפועל (I want, they like).'},
+ {re:/\b(didn't|did not|don't|doesn't)\s+(went|saw|ate|bought|did|had|came|took|made|got|wrote|drank|met|flew|slept|swam|told|said|gave|found|left|thought)\b/gi,fix:(m,a,v)=>`${a} ${BASE[v.toLowerCase()]}`,he:'אחרי did / didn\'t / don\'t הפועל חוזר לצורת הבסיס (didn\'t go).'},
+ {re:/\bopen (the |my )?(light|lights|tv|television|air conditioner|ac|computer|radio)\b/gi,fix:(m,t,x)=>cap(m,`turn on ${t||'the '}${x}`),he:'באנגלית לא "פותחים" אור או טלוויזיה – אומרים turn on.'},
+ {re:/\bclose (the |my )?(light|lights|tv|television|air conditioner|ac|computer|radio)\b/gi,fix:(m,t,x)=>cap(m,`turn off ${t||'the '}${x}`),he:'באנגלית לא "סוגרים" אור או טלוויזיה – אומרים turn off.'},
+ {re:new RegExp(`\\b(I|he|she|you|we|they) (have|has) (${NUMW}) years\\b(?! of)`,'gi'),fix:(m,p,h,n)=>`${p} ${/^i$/i.test(p)?'am':/^(he|she)$/i.test(p)?'is':'are'} ${n} years old`,he:'גיל אומרים עם be ולא עם have: I am 30 years old.'},
+ {re:/\bgood in\b/gi,fix:m=>cap(m,'good at'),he:'"טוב ב..." באנגלית זה good at.'},
+ {re:new RegExp(`\\bsince (${NUMW}) (years|months|weeks|days|hours)\\b`,'gi'),fix:(m,n,u)=>`for ${n} ${u}`,he:'משך זמן = for. since בא לפני נקודת התחלה (since 2020).'},
+ {re:/\bexplain (me|him|her|us|them)\b/gi,fix:(m,o)=>`explain to ${o}`,he:'אומרים explain to me ולא explain me.'},
+ {re:/\bmore (better|bigger|easier|faster|cheaper|smaller|older|younger|happier|worse)\b/gi,fix:(m,a)=>a,he:'צורת ההשוואה כבר כוללת "יותר" – לא צריך more.'},
+ {re:/\ba (?!one\b|once\b)((?:[aeio]|hour|honest|umbrella|uncle|ugly|unhappy|unusual|under)\w*)/g,fix:(m,w)=>`an ${w}`,he:'לפני צליל תנועה (a, e, i, o) משתמשים ב-an.'},
+ {re:/\b(I|we|they|you) (am|are) agree\b/gi,fix:(m,p)=>`${p} agree`,he:'agree הוא פועל – אומרים I agree, בלי am.'},
+ {re:/\bdepend(s)? (in|from)\b/gi,fix:(m,s)=>`depend${s||''} on`,he:'אומרים depend on.'},
+ {re:/\bwait to (me|him|her|you|us|them|the bus|the train)\b/gi,fix:(m,o)=>`wait for ${o}`,he:'"לחכות ל..." זה wait for.'},
+ {re:/\bI very (like|love|enjoy|want|need)\b/gi,fix:(m,v)=>`I really ${v}`,he:'לא אומרים I very like – אומרים I really like או I like it very much.'},
+ {re:/\b(in|at) the (?:last|next) (week|month|year|weekend)\b/gi,fix:(m,p,u)=>m.replace(/^(in|at) the /i,''),he:'לפני last / next לא שמים in the: last week, next year.'},
+ {re:/\bhow (?:it|do you) call(?:s)? (?:it|this|that)?\b/gi,fix:()=>'what is it called',he:'"איך קוראים לזה" = What is it called?'},
+];
+function localCheck(text){
+ const out=[];
+ for(const r of LRULES){r.re.lastIndex=0;for(const m of text.matchAll(r.re)){let fixed=r.fix(...m);if(fixed&&/^[A-Z]/.test(m[0])&&/^[a-z]/.test(fixed))fixed=fixed[0].toUpperCase()+fixed.slice(1);if(fixed&&fixed!==m[0])out.push({offset:m.index,length:m[0].length,original:m[0],fixed,explain_he:r.he});}}
+ // past time markers with present verbs
+ const re=/[^.!?]+[.!?]?/g;let s;
+ while((s=re.exec(text))){const sent=s[0];if(!/\b(yesterday|last (?:week|night|year|month|summer|weekend|time)|ago)\b/i.test(sent))continue;
+  for(const m of sent.matchAll(/\b(I|we|they|you|he|she|it)\s+(go|goes|eat|eats|see|sees|buy|buys|do|have|has|come|meet|take|make|write|drink|get|is|are|visit|play|watch|work|study|travel|swim|fly|sleep)\b/gi)){
+   const v=m[2].toLowerCase();if(!PAST[v])continue;
+   out.push({offset:s.index+m.index,length:m[0].length,original:m[0],fixed:`${m[1]==='i'?'I':m[1]} ${PAST[v]}`,explain_he:'מדובר בעבר (yesterday / last / ago) – צריך פועל בזמן עבר.'});}}
+ return out;}
+const LT_CAT={TYPOS:'שגיאת כתיב',GRAMMAR:'דקדוק',PUNCTUATION:'פיסוק',CASING:'אות גדולה / קטנה',CONFUSED_WORDS:'מילים שמתבלבלים ביניהן',COLLOCATIONS:'צירוף מילים',REDUNDANCY:'מילה מיותרת',STYLE:'סגנון',TYPOGRAPHY:'טיפוגרפיה',SEMANTICS:'משמעות',MISC:'הערה'};
+async function ltCheck(text){
+ const body=new URLSearchParams({text,language:'en-US',motherTongue:'he'});
+ const r=await withTimeout(fetch('https://api.languagetool.org/v2/check',{method:'POST',body}),9000);
+ if(!r.ok)throw new Error('lt');const j=await r.json();
+ return (j.matches||[]).filter(m=>m.replacements&&m.replacements.length&&!/WHITESPACE|EN_QUOTES|DASH_RULE/.test(m.rule&&m.rule.id||'')).map(m=>({offset:m.offset,length:m.length,original:text.substr(m.offset,m.length),fixed:m.replacements[0].value,
+  explain_he:(LT_CAT[m.rule&&m.rule.category&&m.rule.category.id]||'הערה')+' · '+(m.shortMessage||m.message||'')}));}
+async function grammarCheck(text){
+ const local=localCheck(text);let lt=[],online=true;
+ try{lt=await ltCheck(text);}catch(e){online=false;}
+ const all=[...local];
+ for(const m of lt){if(!all.some(x=>m.offset<x.offset+x.length&&x.offset<m.offset+m.length))all.push(m);}
+ all.sort((a,b)=>a.offset-b.offset||b.length-a.length);
+ const clean=[];for(const m of all){const p=clean[clean.length-1];if(!p||m.offset>=p.offset+p.length)clean.push(m);}
+ let corrected=text;for(const m of [...clean].reverse())corrected=corrected.slice(0,m.offset)+m.fixed+corrected.slice(m.offset+m.length);
+ return{mistakes:clean,corrected,online};}
+
+/* ====================== TUTOR ====================== */
+const SCRIPTS={
+cafe:{lines:[["Hi there! Welcome to our café. What can I get for you today?","שלום! ברוכים הבאים לבית הקפה. מה אפשר להביא לך היום?","I'd like a cappuccino, please."],["Great choice! What size would you like: small, medium or large?","בחירה מצוינת! איזה גודל: קטן, בינוני או גדול?","A medium, please."],["Would you like anything to eat with that?","תרצה משהו לאכול עם זה?","Yes, can I have a croissant?"],["Is that for here or to go?","זה לשבת כאן או לקחת?","For here, please."],["Perfect. That's eight pounds fifty. How would you like to pay?","מעולה. זה שמונה וחצי פאונד. איך תרצה לשלם?","By credit card, please."]],end:["Thank you! Enjoy your coffee!","תודה! תיהנה מהקפה!"]},
+airport:{lines:[["Good morning! May I see your passport, please?","בוקר טוב! אפשר לראות את הדרכון שלך?","Sure, here you go."],["Where are you flying to today?","לאן אתה טס היום?","I'm flying to London."],["Do you have any bags to check in?","יש לך מזוודות לשלוח?","Yes, I have one suitcase."],["Would you prefer a window seat or an aisle seat?","מעדיף מושב ליד החלון או ליד המעבר?","A window seat, please."],["Here is your boarding pass. Do you have any questions?","הנה כרטיס העלייה למטוס. יש לך שאלות?","What time does boarding start?"]],end:["Boarding starts at gate twelve. Have a great flight!","העלייה למטוס בשער 12. טיסה נעימה!"]},
+interview:{lines:[["Hello, thanks for coming in. Can you tell me a little about yourself?","שלום, תודה שבאת. ספר לי קצת על עצמך.","I'm a software developer with five years of experience."],["Why are you interested in this position?","למה המשרה הזאת מעניינת אותך?","I want to grow and work on interesting products."],["What would you say is your biggest strength?","מה החוזקה הכי גדולה שלך?","I'm a fast learner and I work well in a team."],["Can you tell me about a challenge you faced at work?","ספר על אתגר שהתמודדת איתו בעבודה.","We had a tight deadline, so I organized the team and we finished on time."],["Do you have any questions for us?","יש לך שאלות אלינו?","Yes, what does a typical day look like?"]],end:["Great answers! We'll be in touch soon.","תשובות מצוינות! נהיה בקשר בקרוב."]},
+doctor:{lines:[["Hello, please have a seat. What seems to be the problem?","שלום, שב בבקשה. מה הבעיה?","I have a headache and a sore throat."],["How long have you been feeling this way?","כמה זמן אתה מרגיש ככה?","I've been feeling sick for three days."],["Do you have a fever?","יש לך חום?","Yes, I had a fever last night."],["Are you allergic to any medicine?","אתה אלרגי לתרופה כלשהי?","No, I'm not allergic to anything."],["I'll give you a prescription. Do you have any other questions?","אתן לך מרשם. יש לך עוד שאלות?","How many times a day should I take it?"]],end:["Twice a day, after meals. Get well soon!","פעמיים ביום, אחרי האוכל. החלמה מהירה!"]},
+hotel:{lines:[["Good evening and welcome! Do you have a reservation?","ערב טוב וברוכים הבאים! יש לך הזמנה?","Yes, I have a reservation under the name Cohen."],["How many nights will you be staying with us?","כמה לילות תשהה אצלנו?","Three nights, please."],["Would you like breakfast included?","תרצה ארוחת בוקר כלולה?","Yes, please. What time is breakfast?"],["Here is your key card. Your room is on the fifth floor. Do you need help with your luggage?","הנה כרטיס החדר. החדר בקומה החמישית. צריך עזרה עם המזוודות?","No, thank you. Where is the elevator?"],["Is there anything else I can help you with?","יש עוד משהו שאוכל לעזור בו?","Could I get a wake-up call at seven?"]],end:["Of course. Enjoy your stay!","בוודאי. שהייה נעימה!"]},
+shop:{lines:[["Hi! Are you looking for anything in particular?","היי! מחפש משהו מסוים?","Yes, I'm looking for a jacket."],["What size do you usually wear?","באיזו מידה אתה לובש בדרך כלל?","I usually wear a medium."],["Would you like to try it on? The fitting rooms are over there.","תרצה למדוד? תאי המדידה שם.","Yes, thank you."],["How does it fit?","איך זה יושב?","It's a little too big. Do you have a smaller size?"],["This one is on sale today, twenty percent off. Would you like to take it?","זה במבצע היום, 20% הנחה. תרצה לקחת?","Yes, I'll take it. Can I pay by card?"]],end:["Absolutely. Here's your receipt. Have a nice day!","בטח. הנה הקבלה. יום נעים!"]},
+directions:{lines:[["Hi! You look a little lost. Can I help you?","היי! נראה שאתה קצת אבוד. אפשר לעזור?","Yes, please. How do I get to Central Park?"],["Are you walking or taking the subway?","אתה הולך ברגל או נוסע ברכבת התחתית?","I'd like to walk."],["Go straight for two blocks, then turn left. Is that clear?","לך ישר שני רחובות ואז פנה שמאלה. ברור?","Yes. How long does it take?"],["About fifteen minutes. Is this your first time in New York?","בערך רבע שעה. זו הפעם הראשונה שלך בניו יורק?","Yes, it's my first time here."],["What else are you planning to see?","מה עוד אתה מתכנן לראות?","I want to see the Statue of Liberty."]],end:["Great plan! Enjoy the city!","תוכנית מעולה! תיהנה מהעיר!"]},
+free:{lines:[["Hi! I'm Tuki, your English buddy. How are you today?","היי! אני טוקי, החבר שלך לאנגלית. מה שלומך היום?","I'm good, thanks. How are you?"],["I'm great, thanks! What do you do for work or study?","מצוין, תודה! במה אתה עובד או לומד?","I work as a teacher."],["Interesting! What do you like to do in your free time?","מעניין! מה אתה אוהב לעשות בזמן הפנוי?","I like hiking and reading books."],["What did you do last weekend?","מה עשית בסוף השבוע האחרון?","I went to the beach with my family."],["Why do you want to improve your English?","למה אתה רוצה לשפר את האנגלית?","I want to travel and talk with people from other countries."]],end:["That's a great reason. Keep practicing – you're doing awesome!","סיבה מעולה. תמשיך להתאמן – אתה מצוין!"]}
+};
 let chat=null;
 function tutorHome(){
- if(!needAI())return;
- view(`<div class="stack"><h2>💬 שיחה עם מורה AI</h2><p class="muted" style="margin-top:-8px">בחר תרחיש. אפשר לכתוב או לדבר, המורה עונה בקול ומתקן טעויות בעדינות.</p>
+ view(`<div class="stack"><h2>💬 שיחה עם המורה</h2><p class="muted" style="margin-top:-8px">בחרו תרחיש. אפשר לכתוב או לדבר, המורה עונה בקול ומתקן טעויות.</p>
  <div class="scen">${SCENARIOS.map(s=>`<button class="mod" style="min-height:90px" onclick="startChat('${s.id}')"><span class="ic">${s.icon}</span><span class="t">${s.he}</span></button>`).join('')}</div>
- <div class="note">💡 הרמה שלך (${S.level}) נשלחת למורה, כך שהוא מדבר בשפה שמתאימה לך.</div></div>`,'tutor');}
+ <div class="note">💡 לא יודעים מה לענות? לחצו על "רעיון לתשובה" מתחת לשאלה של המורה.</div></div>`,'tutor');}
 function startChat(id){
- const sc=SCENARIOS.find(s=>s.id===id);chat={sc,msgs:[],busy:false};
+ const sc=SCENARIOS.find(s=>s.id===id);chat={sc,msgs:[],busy:false,step:0,ok:0,offline:!aiReady()};
  view(`<div class="ses-head"><button class="iconbtn" onclick="tutorHome()">→</button><h2 style="margin:0;font-size:18px">${sc.icon} ${sc.he}</h2>
  <label class="small muted" style="margin-inline-start:auto;display:flex;gap:6px;align-items:center"><input type="checkbox" id="autos" ${S.settings.autoSpeak?'checked':''}> הקראה אוטומטית</label></div>
  <div class="chat" id="chat"></div>
- <div class="chatbar"><button class="mic needs-mic" id="cmic" style="padding:11px 14px">🎤</button><input class="inp en" id="cin" placeholder="Write in English..." autocomplete="off"><button class="btn primary" id="csend">שלח</button></div>`,'chat');
+ <div class="chatbar" id="cbar"><button class="mic needs-mic" id="cmic" style="padding:11px 14px">🎤</button><input class="inp en" id="cin" placeholder="Write in English..." autocomplete="off"><button class="btn primary" id="csend">שלח</button></div>`,'chat');
  $('#autos').onchange=e=>{S.settings.autoSpeak=e.target.checked;save();};
  const cin=$('#cin');$('#csend').onclick=()=>sendChat();cin.onkeydown=e=>{if(e.key==='Enter'){e.preventDefault();sendChat();}};
  const mb=$('#cmic');mb.onclick=()=>toggleListen(mb,t=>{cin.value=t;},t=>{if(t){cin.value=t;sendChat();}});
- tutorTurn();}
+ if(chat.offline)scriptTurn();else tutorTurn();}
+function addTutorMsg(text,he,sample){
+ const box=$('#chat');if(!box)return;
+ const m=document.createElement('div');m.className='msg ai';
+ m.innerHTML=`<div class="en">${esc(text)}</div><div class="tr" hidden>${esc(he||'')}</div>${sample?`<div class="tr samp" hidden>💡 <span class="en">${esc(sample)}</span> ${spk(sample,'sm')}</div>`:''}
+ <div class="tools">${spk(text,'sm')}${he?'<button class="btn ghost small tbtn" style="padding:4px 10px">תרגום</button>':''}${sample?'<button class="btn ghost small sbtn" style="padding:4px 10px">רעיון לתשובה</button>':''}</div>`;
+ const tb=m.querySelector('.tbtn');if(tb)tb.onclick=()=>{const t=m.querySelector('.tr:not(.samp)');t.hidden=!t.hidden;};
+ const sb=m.querySelector('.sbtn');if(sb)sb.onclick=()=>{const t=m.querySelector('.samp');t.hidden=!t.hidden;};
+ box.appendChild(m);m.scrollIntoView({block:'end',behavior:'smooth'});
+ if(S.settings.autoSpeak)speak(text);}
+function addCorrection(res){
+ const box=$('#chat');const c=document.createElement('div');c.className='corr';
+ if(!res.mistakes.length){c.style.background='var(--good-soft)';c.style.borderColor='#bfe5c9';c.innerHTML=res.online?'👍 מעולה, בלי טעויות!':'👍 לא מצאתי טעויות';}
+ else c.innerHTML=`✏️ <b>עדיף לומר:</b><div class="en" style="margin:4px 0"><b>${esc(res.corrected)}</b> ${spk(res.corrected,'sm')}</div>${res.mistakes.map(m=>`<div class="small"><span class="en" style="color:var(--bad);text-decoration:line-through">${esc(m.original)}</span> ← <b class="en">${esc(m.fixed)}</b> · ${esc(m.explain_he)}</div>`).join('')}`;
+ box.appendChild(c);c.scrollIntoView({block:'end',behavior:'smooth'});}
+function scriptTurn(){
+ const sc=SCRIPTS[chat.sc.id];
+ if(chat.step<sc.lines.length){const [t,he,sample]=sc.lines[chat.step];chat.msgs.push({role:'ai',text:t});addTutorMsg(t,he,sample);return;}
+ addTutorMsg(sc.end[0],sc.end[1]);addXP(15);
+ const bar=$('#cbar');if(bar)bar.innerHTML=`<div class="card" style="flex:1;text-align:center"><b>🎉 סיימת את השיחה!</b> ${chat.ok} מתוך ${sc.lines.length} תשובות בלי טעויות · +15 XP<div class="row" style="justify-content:center;margin-top:10px"><button class="btn primary" onclick="startChat('${chat.sc.id}')">שוב</button><button class="btn ghost" onclick="tutorHome()">תרחיש אחר</button></div></div>`;}
+async function sendOffline(t){
+ chat.busy=true;const box=$('#chat');
+ const ty=document.createElement('div');ty.className='typing';ty.innerHTML='<span class="loader"></span> בודק...';box.appendChild(ty);
+ const res=await grammarCheck(t);ty.remove();
+ addCorrection(res);if(!res.mistakes.length)chat.ok++;
+ record('speaking',!res.mistakes.length,null,null);
+ if(res.mistakes.length)addMistake({kind:'chat',ref:t,prompt:t,correct:res.corrected,given:t});save();
+ chat.step++;setTimeout(()=>{scriptTurn();chat.busy=false;const ci=$('#cin');if(ci)ci.focus();},700);}
 function chatPrompt(){
  const tr=chat.msgs.map(m=>(m.role==='ai'?'Tutor: ':'Learner: ')+m.text).join('\n');
  return `You are a warm, encouraging English tutor for a native Hebrew speaker at CEFR level ${S.level}.
 Role-play scenario: ${chat.sc.en}. Stay in character, but stay a supportive teacher.
 Write your reply in natural spoken English suited to level ${S.level}: short (1-3 sentences), and end with a question or prompt that keeps the conversation going.
 ${chat.msgs.length?`If the learner's LAST message has grammar, vocabulary or spelling mistakes, set "correction" to a short Hebrew explanation and "corrected_en" to the corrected English sentence. If it was correct and natural, set both to null.`:'This is the start: open the role-play with a friendly first line. correction and corrected_en are null.'}
+Also give "sample": a short example answer the learner could say next.
 Conversation so far:
 ${tr||'(none yet)'}
-Return only JSON: {"reply":"your English reply","reply_he":"Hebrew translation of your reply","correction":string|null,"corrected_en":string|null}`;}
+Return only JSON: {"reply":"your English reply","reply_he":"Hebrew translation of your reply","correction":string|null,"corrected_en":string|null,"sample":"example answer"}`;}
 async function tutorTurn(){
  const box=$('#chat');if(!box)return;chat.busy=true;
  const ty=document.createElement('div');ty.className='typing';ty.innerHTML='<span class="loader"></span> המורה מקליד...';box.appendChild(ty);ty.scrollIntoView({block:'end',behavior:'smooth'});
- try{const r=await ai(chatPrompt(),'default');ty.remove();
+ try{const r=await ai(chatPrompt());ty.remove();
   const last=chat.msgs[chat.msgs.length-1];
   if(last&&last.role==='me'){if(r.correction){const c=document.createElement('div');c.className='corr';c.innerHTML=`✏️ ${esc(r.correction)}${r.corrected_en?`<div class="en" style="margin-top:4px"><b>${esc(r.corrected_en)}</b></div>`:''}`;box.appendChild(c);
     addMistake({kind:'chat',ref:last.text,prompt:last.text,correct:r.corrected_en||r.correction,given:last.text});}
    record('speaking',!r.correction,null,null);}
-  chat.msgs.push({role:'ai',text:r.reply||''});
-  const m=document.createElement('div');m.className='msg ai';m.innerHTML=`<div class="en">${esc(r.reply)}</div><div class="tr" hidden>${esc(r.reply_he||'')}</div><div class="tools">${spk(r.reply||'','sm')}<button class="btn ghost small" style="padding:4px 10px">תרגום</button></div>`;
-  m.querySelector('.tools .ghost').onclick=()=>{const t=m.querySelector('.tr');t.hidden=!t.hidden;};
-  box.appendChild(m);m.scrollIntoView({block:'end',behavior:'smooth'});
-  if(S.settings.autoSpeak)speak(r.reply);
- }catch(e){ty.remove();aiErr(e);}
+  chat.msgs.push({role:'ai',text:r.reply||''});addTutorMsg(r.reply||'',r.reply_he||'',r.sample||'');
+ }catch(e){ty.remove();
+  if(SCRIPTS[chat.sc.id]){chat.offline=true;toast('עוברים לשיחה מודרכת');chat.step=0;scriptTurn();}else aiErr(e);}
  chat.busy=false;const ci=$('#cin');if(ci)ci.focus();}
 function sendChat(){
- const cin=$('#cin');const t=cin.value.trim();if(!t||chat.busy)return;cin.value='';
- chat.msgs.push({role:'me',text:t});const m=document.createElement('div');m.className='msg me en';m.textContent=t;$('#chat').appendChild(m);tutorTurn();}
+ const cin=$('#cin');if(!cin)return;const t=cin.value.trim();if(!t||chat.busy)return;cin.value='';
+ chat.msgs.push({role:'me',text:t});const m=document.createElement('div');m.className='msg me en';m.textContent=t;$('#chat').appendChild(m);
+ if(chat.offline)sendOffline(t);else tutorTurn();}
 
 /* ====================== WRITING ====================== */
 function writeHome(){
- if(!needAI())return;const ps=WRITE_PROMPTS[S.level];
+ const ps=WRITE_PROMPTS[S.level];
  view(`<div class="stack"><h2>📝 תיקון כתיבה</h2><div class="card stack"><div><b>נושא מוצע:</b> <span id="wp">${esc(ps[0])}</span> <button class="btn ghost small" id="wpn" style="padding:4px 10px">🔄 נושא אחר</button></div>
  <textarea class="inp en" id="wt" placeholder="Write here in English..."></textarea><div class="row"><button class="btn primary" id="wsend">✨ תקן לי</button><span class="small muted" id="wc">0 מילים</span></div></div><div id="wres"></div></div>`,'write');
  let pi=0;$('#wpn').onclick=()=>{pi=(pi+1)%ps.length;$('#wp').textContent=ps[pi];};
  const wt=$('#wt');wt.oninput=()=>{$('#wc').textContent=(wt.value.trim().split(/\s+/).filter(Boolean).length)+' מילים';};
- $('#wsend').onclick=async()=>{const txt=wt.value.trim();if(txt.split(/\s+/).length<3){toast('כתוב לפחות משפט אחד');return;}
+ $('#wsend').onclick=async()=>{const txt=wt.value.trim();if(txt.split(/\s+/).length<3){toast('כתבו לפחות משפט אחד');return;}
   const b=$('#wsend');b.disabled=true;b.innerHTML='<span class="loader"></span> בודק...';
-  try{const r=await ai(`You are an English writing teacher for a native Hebrew speaker (CEFR level ${S.level}). Correct the learner's text. Be encouraging.
+  let r=null;
+  if(aiReady()){try{r=await ai(`You are an English writing teacher for a native Hebrew speaker (CEFR level ${S.level}). Correct the learner's text. Be encouraging.
 Return only JSON: {"corrected":"the full corrected text","score":0-100,"level_estimate":"CEFR level of the writing","mistakes":[{"original":"wrong fragment","fixed":"corrected fragment","explain_he":"short explanation in Hebrew"}],"tip_he":"one encouraging, practical tip in Hebrew","better_version":"a more natural, slightly more advanced rewrite"}
 Learner's text:
-"""${txt}"""`,'default');
-   const ok=(r.score||0)>=70;record('writing',ok,null,null);addXP(10);
-   (r.mistakes||[]).forEach(m=>addMistake({kind:'write',ref:m.original,prompt:m.original,correct:m.fixed,given:m.original}));save();
-   $('#wres').innerHTML=`<div class="card stack"><div class="row"><h3 style="margin:0">ציון: ${r.score??'?'} / 100</h3><span class="pill">רמת הכתיבה: ${esc(r.level_estimate||'')}</span></div>
-   <div><b>הטקסט המתוקן:</b><div class="explain en" style="margin-top:6px;background:var(--good-soft)">${esc(r.corrected)} ${spk(r.corrected||'','sm')}</div></div>
-   ${(r.mistakes||[]).length?`<div><b>הטעויות שלך:</b>${r.mistakes.map(m=>`<div class="mist"><div><span class="en" style="color:var(--bad);text-decoration:line-through">${esc(m.original)}</span> ← <b class="en" style="color:var(--good)">${esc(m.fixed)}</b><div class="small muted">${esc(m.explain_he)}</div></div></div>`).join('')}</div>`:'<div>🎉 לא נמצאו טעויות!</div>'}
-   ${r.better_version?`<div><b>גרסה טבעית יותר:</b><div class="explain en" style="margin-top:6px">${esc(r.better_version)} ${spk(r.better_version,'sm')}</div></div>`:''}
-   ${r.tip_he?`<div class="note">💡 ${esc(r.tip_he)}</div>`:''}</div>`;
-   $('#wres').scrollIntoView({behavior:'smooth'});
-  }catch(e){aiErr(e);}b.disabled=false;b.textContent='✨ תקן לי';};}
+"""${txt}"""`);}catch(e){r=null;}}
+  if(!r){const g=await grammarCheck(txt);const words=txt.split(/\s+/).filter(Boolean).length;
+   r={corrected:g.corrected,mistakes:g.mistakes,score:Math.max(30,Math.round(100-g.mistakes.length*100/Math.max(words,1)*3)),
+    tip_he:g.mistakes.length?pick(TIPS).t+' – '+pick(TIPS).b:'כתיבה נקייה! נסו בפעם הבאה משפטים ארוכים יותר עם מילות קישור כמו because, however, although.',offline:!g.online};}
+  const ok=(r.score||0)>=70;record('writing',ok,null,null);addXP(10);
+  (r.mistakes||[]).forEach(m=>addMistake({kind:'write',ref:m.original,prompt:m.original,correct:m.fixed,given:m.original}));save();
+  $('#wres').innerHTML=`<div class="card stack"><div class="row"><h3 style="margin:0">ציון: ${r.score??'?'} / 100</h3>${r.level_estimate?`<span class="pill">רמת הכתיבה: ${esc(r.level_estimate)}</span>`:''}</div>
+  <div><b>הטקסט המתוקן:</b><div class="explain en" style="margin-top:6px;background:var(--good-soft)">${esc(r.corrected)} ${spk(r.corrected||'','sm')}</div></div>
+  ${(r.mistakes||[]).length?`<div><b>הטעויות שלך:</b>${r.mistakes.map(m=>`<div class="mist"><div><span class="en" style="color:var(--bad);text-decoration:line-through">${esc(m.original)}</span> ← <b class="en" style="color:var(--good)">${esc(m.fixed)}</b><div class="small muted">${esc(m.explain_he)}</div></div></div>`).join('')}</div>`:'<div>🎉 לא נמצאו טעויות!</div>'}
+  ${r.better_version?`<div><b>גרסה טבעית יותר:</b><div class="explain en" style="margin-top:6px">${esc(r.better_version)} ${spk(r.better_version,'sm')}</div></div>`:''}
+  ${r.tip_he?`<div class="note">💡 ${esc(r.tip_he)}</div>`:''}${r.offline?'<div class="small muted">אין חיבור לאינטרנט – נבדקו רק הטעויות הנפוצות.</div>':''}</div>`;
+  $('#wres').scrollIntoView({behavior:'smooth'});
+  b.disabled=false;b.textContent='✨ תקן לי';};}
 
 /* ====================== STORIES ====================== */
 let storyCtx=null;
@@ -756,7 +854,7 @@ function showStory(st){
  view(`<div class="stack"><div class="ses-head"><button class="iconbtn" onclick="storiesHome()">→</button><span class="pill">${st.lvl}</span></div>
  <div class="card stack"><div class="row"><h2 class="en" style="margin:0">${esc(st.title)}</h2><span style="margin-inline-start:auto"></span>${spk(st.text)}${spkSlow(st.text)}</div>
  <div class="story en">${tokens.map(t=>/\s+/.test(t)?t:`<span class="tw${lookupLocal(t)?' known':''}">${esc(t)}</span>`).join('')}</div>
- <div class="small muted">מילים עם קו מנוקד נמצאות במילון האפליקציה. ${sampleCap?'על כל מילה אחרת ה-AI יתרגם.':''}</div></div>
+ <div class="small muted">מילים עם קו מנוקד נמצאות במילון האפליקציה. ${aiReady()?'על כל מילה אחרת ה-AI יתרגם.':''}</div></div>
  ${st.q&&st.q.length?`<div class="card stack"><h3>שאלות הבנה</h3>${st.q.map((q,qi)=>`<div data-q="${qi}"><div class="en" style="font-weight:600">${qi+1}. ${esc(q.q)}</div><div class="opts">${q.o.map((o,oi)=>`<button class="opt en" data-i="${oi}">${esc(o)}</button>`).join('')}</div></div>`).join('')}</div>`:''}
  </div>`,'story');
  $$('.tw').forEach(el=>el.onclick=()=>wordPopup(el.textContent,st.text));
@@ -771,31 +869,45 @@ async function wordPopup(raw,ctx){
    S.words[w.en]={box:1,due:now(),ok:0,bad:0};save();toast('נוספה לתרגול ✓');m.hidden=true;};};
  speak(word);
  if(local)return render(local.en,local.he,local);
- if(!sampleCap){m.innerHTML=`<div class="card stack"><div class="row"><span class="big en">${esc(word)}</span>${spk(word)}</div><p class="muted">המילה לא נמצאת במילון המקומי. תרגום עם AI זמין ב-claude.ai.</p><button class="btn ghost" onclick="$('#modal').hidden=true">סגור</button></div>`;return;}
+ if(!aiReady()){m.innerHTML=`<div class="card"><span class="loader"></span> מתרגם...</div>`;
+  try{const r=await withTimeout(fetch('https://api.mymemory.translated.net/get?q='+encodeURIComponent(word)+'&langpair=en|he'),8000);const j=await r.json();const he=j&&j.responseData&&j.responseData.translatedText;
+   if(he&&!/MYMEMORY|INVALID/i.test(he)&&he.toLowerCase()!==word.toLowerCase())return render(word.toLowerCase(),he,null);}catch(e){}
+  m.innerHTML=`<div class="card stack"><div class="row"><span class="big en">${esc(word)}</span>${spk(word)}</div><p class="muted">לא הצלחתי לתרגם את המילה כרגע. בדקו את החיבור לאינטרנט.</p><button class="btn ghost" onclick="$('#modal').hidden=true">סגור</button></div>`;return;}
  m.innerHTML=`<div class="card"><span class="loader"></span> מתרגם...</div>`;
  try{const r=await ai(`Translate the English word "${word}" as used in this text into Hebrew: "${ctx.slice(0,600)}". Return only JSON: {"base":"dictionary form of the word","he":"short Hebrew translation"}`);
   const f=allWords().find(x=>x.en.toLowerCase()===String(r.base||'').toLowerCase());render(r.base||word,r.he||'',f||null);}catch(e){m.hidden=true;aiErr(e);}}
 
 /* ====================== TOPIC PACKS ====================== */
+const TOPIC_PACKS=[
+{id:'airport',icon:'✈️',he:'שדה תעופה',lvl:'A2',words:[["boarding pass","כרטיס עלייה למטוס","Please show your boarding pass at the gate."],["gate","שער (בשדה תעופה)","Our flight leaves from gate twelve."],["departure","המראה, יציאה","The departure time is 6:30."],["arrival","נחיתה, הגעה","Check the arrival board for our flight."],["passport","דרכון","Don't forget your passport!"],["security check","בדיקה ביטחונית","The security check took twenty minutes."],["carry-on bag","תיק יד","You can take one carry-on bag."],["flight attendant","דייל, דיילת","The flight attendant brought us water."],["window seat","מושב ליד החלון","I always ask for a window seat."],["layover","עצירת ביניים (קונקשן)","We have a two-hour layover in Rome."]]},
+{id:'restaurant',icon:'🍽️',he:'מסעדה',lvl:'A2',words:[["menu","תפריט","Can I see the menu, please?"],["order","להזמין (אוכל)","Are you ready to order?"],["waiter","מלצר","The waiter was very friendly."],["bill","חשבון","Could we have the bill, please?"],["tip","טיפ","We left a big tip."],["reservation","הזמנת מקום","I have a reservation for two."],["vegetarian","צמחוני","Do you have any vegetarian dishes?"],["dessert","קינוח","Let's share a dessert."],["spicy","חריף","Is this dish spicy?"],["takeaway","טייק אוויי, לקחת","Can I get this as takeaway?"]]},
+{id:'interview',icon:'💼',he:'ראיון עבודה',lvl:'B1',words:[["resume","קורות חיים","I sent my resume last week."],["experience","ניסיון","I have three years of experience in sales."],["strength","חוזקה","My biggest strength is teamwork."],["weakness","חולשה","One weakness I'm working on is public speaking."],["responsible for","אחראי על","I was responsible for a team of five."],["salary expectations","ציפיות שכר","What are your salary expectations?"],["teamwork","עבודת צוות","Good teamwork is important here."],["position","משרה, תפקיד","I'm applying for the marketing position."],["skills","כישורים","She has great communication skills."],["hire","להעסיק, לגייס","They decided to hire me!"]]},
+{id:'hitech',icon:'💻',he:'הייטק ועבודה',lvl:'B1',words:[["feature","פיצ'ר, יכולת","We're adding a new feature next week."],["bug","באג","I found a bug in the app."],["release","שחרור גרסה","The release is planned for Monday."],["feedback","משוב","Thanks for the feedback!"],["priority","עדיפות","This task is our top priority."],["schedule a call","לקבוע שיחה","Let's schedule a call for tomorrow."],["follow up","לחזור בנושא, לעקוב","I'll follow up by email."],["requirement","דרישה","What are the requirements for this project?"],["launch","השקה; להשיק","We will launch the product in May."],["update","עדכון; לעדכן","Can you update me on the progress?"]]},
+{id:'doctor',icon:'🩺',he:'אצל הרופא',lvl:'A2',words:[["appointment","תור (לרופא)","I have a doctor's appointment at ten."],["symptoms","תסמינים","What are your symptoms?"],["fever","חום (גוף)","He has a high fever."],["headache","כאב ראש","I have a terrible headache."],["cough","שיעול; להשתעל","This cough won't go away."],["prescription","מרשם","The doctor gave me a prescription."],["pharmacy","בית מרקחת","The pharmacy is open until nine."],["allergic","אלרגי","I'm allergic to peanuts."],["sore throat","כאב גרון","I have a sore throat."],["recover","להחלים","She recovered quickly."]]},
+{id:'shopping',icon:'🛍️',he:'קניות',lvl:'A2',words:[["size","מידה","Do you have this in a smaller size?"],["fitting room","תא מדידה","Where is the fitting room?"],["discount","הנחה","Is there a student discount?"],["receipt","קבלה","Keep the receipt, please."],["refund","החזר כספי","Can I get a refund?"],["exchange","להחליף (מוצר)","I'd like to exchange these shoes."],["cash","מזומן","Do you accept cash?"],["credit card","כרטיס אשראי","I'll pay by credit card."],["on sale","במבצע","These jeans are on sale."],["expensive","יקר","This bag is too expensive."]]},
+{id:'hotel',icon:'🏨',he:'מלון',lvl:'A2',words:[["check in","לעשות צ'ק אין","What time can we check in?"],["check out","לעשות צ'ק אאוט","Check out is at eleven."],["front desk","דלפק קבלה","Ask at the front desk."],["room service","שירות חדרים","Let's order room service."],["key card","כרטיס חדר","My key card doesn't work."],["towel","מגבת","Could we get extra towels?"],["breakfast included","ארוחת בוקר כלולה","Is breakfast included?"],["elevator","מעלית","The elevator is on the left."],["view","נוף","The room has a beautiful sea view."],["wake-up call","שיחת השכמה","Can I have a wake-up call at seven?"]]},
+{id:'sport',icon:'⚽',he:'ספורט',lvl:'A2',words:[["team","קבוצה","Which team do you support?"],["coach","מאמן","The coach is very strict."],["score","תוצאה; להבקיע","What's the score?"],["win","לנצח","We won the game!"],["lose","להפסיד","They lost two to one."],["match","משחק","The match starts at eight."],["practice","אימון; להתאמן","We have practice every Tuesday."],["fans","אוהדים","The fans were singing all game."],["referee","שופט (במשחק)","The referee gave him a yellow card."],["draw","תיקו","The game ended in a draw."]]}
+];
+TAGS.topic='חבילת נושא';
+TOPIC_PACKS.forEach(p=>p.words.forEach(([en,he,ex])=>WORDS.push({en,he,ex,lvl:p.lvl,tag:'topic',topic:p.id})));
 function topicHome(){
- if(!needAI())return;
- const topics=[...new Set(S.custom.words.filter(w=>w.topic).map(w=>w.topic))];
- view(`<div class="stack"><h2>✨ מילים לפי נושא</h2><div class="card stack"><p style="margin:0">כתוב כל נושא – ה-AI ייצור 10 מילים ברמה שלך (${S.level}), עם תרגום ומשפט לדוגמה.</p>
- <div class="row"><input class="inp" id="tp" placeholder="למשל: צבא, בישול, הייטק, רופא, טיסה..." style="flex:1"><button class="btn primary" id="tgo">צור חבילה</button></div>
- <div class="row">${['שדה תעופה','ראיון עבודה','מסעדה','הייטק','ספורט','רפואה'].map(t=>`<button class="chip" data-t="${t}">${t}</button>`).join('')}</div></div>
- ${topics.length?`<div class="card stack"><h3>החבילות שלך</h3><div class="row">${topics.map(t=>`<button class="btn ghost" data-pack="${esc(t)}">📦 ${esc(t)}</button>`).join('')}</div></div>`:''}<div id="tres"></div></div>`,'topic');
- $$('[data-t]').forEach(b=>b.onclick=()=>{$('#tp').value=b.dataset.t;});
+ const mine=[...new Set(S.custom.words.filter(w=>w.topic).map(w=>w.topic))];
+ view(`<div class="stack"><h2>✨ מילים לפי נושא</h2><p class="muted" style="margin-top:-8px">בחרו חבילה – 10 מילים שימושיות, עם הקראה ומשפט לדוגמה.</p>
+ <div class="grid">${TOPIC_PACKS.map(p=>{const n=p.words.filter(([en])=>S.words[en]&&S.words[en].box>=3).length;return`<button class="mod" data-pack="${p.id}"><span class="ic">${p.icon}</span><span class="t">${p.he}</span><span class="d">${n}/10 נלמדו</span></button>`;}).join('')}</div>
+ <div class="card stack needs-ai" style="display:block"><h3>🪄 חבילה על כל נושא אחר</h3><div class="row"><input class="inp" id="tp" placeholder="למשל: צבא, בישול, חלל..." style="flex:1"><button class="btn primary" id="tgo">צור חבילה</button></div></div>
+ ${mine.length?`<div class="card stack"><h3>החבילות שלך</h3><div class="row">${mine.map(t=>`<button class="btn ghost" data-pack="${esc(t)}">📦 ${esc(t)}</button>`).join('')}</div></div>`:''}</div>`,'topic');
  $$('[data-pack]').forEach(b=>b.onclick=()=>showPack(b.dataset.pack));
- const go=$('#tgo');go.onclick=async()=>{const tp=$('#tp').value.trim();if(!tp)return;go.disabled=true;go.innerHTML='<span class="loader"></span> יוצר...';
+ const go=$('#tgo');if(go)go.onclick=async()=>{const tp=$('#tp').value.trim();if(!tp)return;go.disabled=true;go.innerHTML='<span class="loader"></span> יוצר...';
   try{const r=await ai(`Create a list of 10 useful English words or short phrases about the topic "${tp}" for a native Hebrew speaker at CEFR level ${S.level}. Return only a JSON array: [{"en":"word or phrase","he":"Hebrew translation","ex":"short natural example sentence in English at that level"}]`);
    const have=new Set(allWords().map(w=>w.en.toLowerCase()));
    const ws=(Array.isArray(r)?r:[]).filter(x=>x&&x.en&&x.he&&!have.has(x.en.toLowerCase())).map(x=>({en:x.en,he:x.he,ex:x.ex||'',lvl:S.level,tag:'custom',custom:true,topic:tp}));
    S.custom.words.push(...ws);save();showPack(tp);}catch(e){aiErr(e);go.disabled=false;go.textContent='צור חבילה';}};}
-function showPack(tp){
- const ws=S.custom.words.filter(w=>w.topic===tp);
- view(`<div class="stack"><div class="ses-head"><button class="iconbtn" onclick="topicHome()">→</button><h2 style="margin:0">📦 ${esc(tp)}</h2></div>
+function showPack(key){
+ const p=TOPIC_PACKS.find(x=>x.id===key);
+ const ws=p?WORDS.filter(w=>w.topic===key):S.custom.words.filter(w=>w.topic===key);
+ view(`<div class="stack"><div class="ses-head"><button class="iconbtn" onclick="topicHome()">→</button><h2 style="margin:0">${p?p.icon+' '+p.he:'📦 '+esc(key)}</h2></div>
  <div class="card">${ws.map(w=>`<div class="mist"><div><b class="en">${esc(w.en)}</b> – ${esc(w.he)}<div class="small muted en">${esc(w.ex)}</div></div>${spk(w.en,'sm')}</div>`).join('')}</div>
- <button class="btn primary wide" id="learn">🚀 התחל ללמוד את החבילה</button></div>`,'pack');
+ <button class="btn primary wide" id="learn">🚀 התחילו ללמוד את החבילה</button></div>`,'pack');
  $('#learn').onclick=()=>startVocab(ws);}
 
 /* ====================== TIPS / MISTAKES / PROGRESS / SETTINGS ====================== */
@@ -835,23 +947,39 @@ function progressView(){
  <div class="card stack"><h3>דיוק לפי מיומנות</h3>${Object.entries(SK).map(([k,l])=>{const [ok,t]=S.stats[k]||[0,0];const p=t?ok/t:0;return`<div class="row"><span style="width:120px">${l}</span><div class="sbar"><i style="width:${p*100}%"></i></div><span class="small muted" style="width:70px">${t?Math.round(p*100)+'%':'—'} (${t})</span></div>`;}).join('')}</div>
  </div>`,'progress');}
 function settingsView(){
+ loadVoices();
+ const vopts=voices.length?voices.map(v=>`<option value="${esc(v.name)}" ${S.settings.voiceName===v.name?'selected':''}>${esc(v.name)} (${esc(v.lang)})</option>`).join(''):'';
  view(`<div class="stack"><h2>⚙️ הגדרות</h2><div class="card">
  <label class="set">יעד יומי<select class="inp" id="sg">${[[50,'קליל · 5 דק׳'],[100,'רגיל · 10 דק׳'],[200,'רציני · 20 דק׳'],[300,'אינטנסיבי · 30 דק׳']].map(([v,l])=>`<option value="${v}" ${S.goal==v?'selected':''}>${l}</option>`).join('')}</select></label>
  <label class="set">מהירות הקראה<select class="inp" id="sr">${[[0.8,'איטי'],[0.9,'קצת איטי'],[1,'רגיל'],[1.15,'מהיר']].map(([v,l])=>`<option value="${v}" ${S.settings.rate==v?'selected':''}>${l}</option>`).join('')}</select></label>
- <label class="set">קול<span class="row"><select class="inp" id="sv">${['buttery','airy','glassy','rounded'].map(v=>`<option ${S.settings.voice===v?'selected':''}>${v}</option>`).join('')}</select><button class="spk sm" data-say="Hello! Let's practice English together.">🔊</button></span></label>
+ <label class="set">קול<span class="row"><select class="inp" id="sv" style="max-width:200px"><option value="">אוטומטי</option>${vopts}</select><button class="spk sm" data-say="Hello! Let's practice English together.">🔊</button></span></label>
  <label class="set">הקראה אוטומטית של מילים<input type="checkbox" id="sa" ${S.settings.autoSpeak?'checked':''}></label>
  <div class="set" style="display:block"><div style="margin-bottom:8px">רמה</div><div class="lvlpick">${LEVELS.map(l=>`<button class="${S.level===l?'on':''}" data-l="${l}"><b>${l}</b>${LVL_HE[l]}</button>`).join('')}</div></div>
  <div class="row" style="padding-top:14px"><button class="btn ghost" onclick="startPlacement()">🎯 מבחן רמה מחדש</button><button class="btn ghost" id="rst" style="color:var(--bad)">אפס התקדמות</button></div></div>
- <div class="note">ההתקדמות שלך נשמרת אוטומטית${dbRef?' בחשבון שלך ומסונכרנת בין מכשירים':' בדפדפן הזה'}.</div></div>`,'settings');
+ ${PROXY_URL?'<div class="note">🤖 ה-AI מחובר ופועל.</div>':`<div class="card stack"><h3>🤖 חיבור AI (בחינם)</h3>
+ <p class="small" style="margin:0">לא חובה – הכל עובד גם בלי. חיבור AI הופך את המורה לשיחה חופשית לגמרי, ומוסיף סיפורים חדשים וחבילות מילים על כל נושא. משיגים מפתח Gemini חינמי מ-Google:</p>
+ <ol class="small" style="margin:0;padding-inline-start:20px"><li>נכנסים ל-<b class="en">aistudio.google.com/apikey</b> עם חשבון Google</li><li>לוחצים <b class="en">Create API key</b></li><li>מעתיקים את המפתח ומדביקים כאן</li></ol>
+ <input class="inp en" id="akey" type="password" autocomplete="off" placeholder="AIza..." value="${esc(S.settings.aiKey)}">
+ <details class="small"><summary class="muted">מתקדם</summary><label class="set">מודל<input class="inp en" id="amodel" style="max-width:220px;font-size:14px;padding:8px" value="${esc(S.settings.aiModel)}"></label></details>
+ <div class="row"><button class="btn primary" id="asave">שמור ובדוק</button><span id="ares" class="small"></span></div>
+ <p class="small muted" style="margin:0">המפתח נשמר רק במכשיר הזה.</p></div>`}
+ <div class="note">ההתקדמות שלך נשמרת אוטומטית במכשיר הזה.</div></div>`,'settings');
  $('#sg').onchange=e=>{S.goal=+e.target.value;save();renderTop();};
  $('#sr').onchange=e=>{S.settings.rate=+e.target.value;save();};
- $('#sv').onchange=e=>{S.settings.voice=e.target.value;save();};
+ $('#sv').onchange=e=>{S.settings.voiceName=e.target.value;save();speak("Hello! Let's practice English together.");};
  $('#sa').onchange=e=>{S.settings.autoSpeak=e.target.checked;save();};
  $$('[data-l]').forEach(b=>b.onclick=()=>{S.level=b.dataset.l;S.recent=[];save();renderTop();settingsView();toast('הרמה עודכנה ל-'+S.level);});
- $('#rst').onclick=()=>{const b=$('#rst');b.outerHTML='<span class="row"><span>למחוק הכל?</span><button class="btn accent" id="rst2">כן, אפס</button></span>';$('#rst2').onclick=()=>{S=defaultState();S.updatedAt=now();save();renderTop();welcome();};};}
+ const as=$('#asave');if(as)as.onclick=async()=>{
+  S.settings.aiKey=$('#akey').value.trim();const m=$('#amodel').value.trim();if(m)S.settings.aiModel=m;save();refreshCaps();
+  const res=$('#ares');if(!S.settings.aiKey){res.textContent='המפתח נמחק';return;}
+  as.disabled=true;res.innerHTML='<span class="loader"></span> בודק...';
+  try{const r=await ai('Return only this JSON: {"ok": true}');res.innerHTML=r&&r.ok?'<span style="color:var(--good)">✅ מחובר! אפשר להשתמש בכל תכונות ה-AI</span>':'⚠️ התקבלה תשובה לא צפויה';}
+  catch(e){res.innerHTML='<span style="color:var(--bad)">❌ '+({bad_key:'המפתח לא תקין',bad_model:'המודל לא נמצא',rate_limited:'יותר מדי בקשות, נסו בעוד דקה',network:'אין חיבור לאינטרנט'}[e&&e.code]||'החיבור נכשל')+'</span>';}
+  as.disabled=false;};
+ $('#rst').onclick=()=>{const b=$('#rst');b.outerHTML='<span class="row"><span>למחוק הכל?</span><button class="btn accent" id="rst2">כן, אפס</button></span>';$('#rst2').onclick=()=>{const keep={aiKey:S.settings.aiKey,aiModel:S.settings.aiModel};S=defaultState();Object.assign(S.settings,keep);S.updatedAt=now();save();renderTop();welcome();};};}
 
 /* ====================== BOOT ====================== */
-renderTop();home();initCaps();
+refreshCaps();renderTop();home();
 </script>
 </body>
 </html>
