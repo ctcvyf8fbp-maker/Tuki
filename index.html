@@ -946,6 +946,7 @@ function renderTop(){
 
 /* ====================== HOME ====================== */
 const MODULES=[
+ {id:'exam',icon:'📋',t:'הכנה למבחן',d:()=>{const t=(S.tests||[])[0];return t?`${t.name} · ${examReady(t)}% מוכנות`:'הרשימה שלך + תאריך המבחן';}},
  {id:'bagrut',icon:'🎓',t:'מסלול בגרות',d:()=>'מילים, הבנת הנקרא, קישור'},
  {id:'psycho',icon:'🧠',t:'פסיכומטרי / אמי"ר',d:()=>'השלמה, ניסוח מחדש, קריאה'},
  {id:'daily',icon:'⚡',t:'תרגול משולב',d:()=>'10 שאלות מכל הסוגים'},
@@ -974,6 +975,7 @@ function home(){
   <div style="flex:1;min-width:180px"><h1 style="margin:0">${P.n>PATH_LEN?'סיימת את המסלול! 🏆':`שיעור ${P.n} מתוך ${PATH_LEN}`}</h1><div class="muted">${P.last===dayKey()?'✅ השיעור של היום הושלם · ':''}רמה ${S.level} · ${g}/${S.goal} XP היום</div>
   <div style="height:8px;background:rgba(255,255,255,.25);border-radius:9px;margin-top:8px;overflow:hidden"><i style="display:block;height:100%;width:${Math.min(100,(P.n-1)/PATH_LEN*100)}%;background:#fff;border-radius:9px"></i></div></div>
   <button class="btn light" onclick="open_('path')">${P.last===dayKey()?'▶️ עוד שיעור':'▶️ התחל שיעור'}</button></div></div>
+ ${(S.tests||[]).filter(t=>{const d=daysLeft(t.date);return d!==null&&d>=0&&d<=14&&t.words.length;}).slice(0,2).map(t=>`<button class="note" style="text-align:start;width:100%" onclick="examView('${t.id}')">📋 <b>${esc(t.name)}</b> · ${daysTxt(daysLeft(t.date))} · מוכנות ${examReady(t)}% ← לתרגול</button>`).join('')}
  ${S.cls&&S.cls.message?`<div class="note">📣 <b>הודעה מהמורה:</b> ${esc(S.cls.message)}</div>`:''}
  <div class="card"><div class="small muted" style="margin-bottom:6px">⭐ מילת היום</div><div class="wotd"><span class="w en">${esc(w.en)}</span>${spk(w.en)}<span style="font-size:18px">${esc(w.he)}</span>
  <span style="margin-inline-start:auto"></span>${inDeck?'<span class="pill">✓ ברשימה שלך</span>':`<button class="btn ghost" id="addw">➕ הוסף לתרגול</button>`}</div>
@@ -991,8 +993,9 @@ function welcome(){
 function setLevel(l){S.level=l;S.placementDone=true;S.recent=[];save();renderTop();home();}
 
 function open_(id){
- const map={path:startPath,bagrut:()=>trackHome('bagrut'),psycho:()=>trackHome('psycho'),teacher:teacherHome,daily:startDaily,vocab:()=>startVocab(),cloze:startCloze,trans:startTrans,dict:startDict,pairs:startPairs,shadow:startShadow,
+ const map={exam:examHome,path:startPath,bagrut:()=>trackHome('bagrut'),psycho:()=>trackHome('psycho'),teacher:teacherHome,daily:startDaily,vocab:()=>startVocab(),cloze:startCloze,trans:startTrans,dict:startDict,pairs:startPairs,shadow:startShadow,
   tutor:tutorHome,write:writeHome,stories:storiesHome,topic:topicHome,tips:tipsView,mistakes:mistakesView,progress:progressView,settings:settingsView};
+ if(String(id).startsWith('exam-')){const [,m,tid]=id.split('-');return examSession(m,tid);}
  if(String(id).startsWith('track-')){const [,t,k]=id.split('-');return k==='reading'?readingList(t):runSession({title:`${TRACKS[t].icon} ${TRACKS[t].parts.find(p=>p[0]===k)[2]}`,kind:id,skill:k==='vocab'?'vocab':'grammar',items:trackItems(t,k)});}
  (map[id]||home)();}
 
@@ -1015,11 +1018,12 @@ function startPlacement(){
 /* ====================== SESSION RUNNER ====================== */
 const PRAISE=['מעולה! ✓','כל הכבוד! ✓','בדיוק! ✓','יפה מאוד! ✓','מצוין! ✓'];
 function runSession({title,items,kind,skill,onDone}){
- const ses={i:0,ok:0,n:items.length,xp:0,answered:0};
+ const ses={i:0,ok:0,n:items.length,xp:0,answered:0,wrong:[]};
  if(!ses.n){view(`<div class="card stack"><h2>${title}</h2><p>אין כרגע פריטים לתרגול כאן.</p><button class="btn primary" onclick="home()">חזרה</button></div>`);return;}
  const summary=()=>{const pct=ses.answered?Math.round(ses.ok/ses.answered*100):100;if(onDone){try{onDone(ses);}catch(e){}}
   view(`<div class="card stack" style="text-align:center"><div style="font-size:54px">${pct>=80?'🏆':pct>=50?'👏':'💪'}</div><h1>סיימת!</h1>
   <p style="font-size:18px">${ses.ok} מתוך ${ses.answered} נכונות · <b>+${ses.xp} XP</b></p>
+  ${ses.wrong.length&&String(kind).startsWith('exam')?`<div class="explain" style="text-align:start"><b>כדאי לחזור על:</b>${ses.wrong.map(([a,b])=>`<div class="small">${/[\u0590-\u05FF]/.test(a)?esc(a)+' – <b class="en">'+esc(b)+'</b>':'<b class="en">'+esc(a)+'</b> – '+esc(b)}</div>`).join('')}</div>`:''}
   <div class="row" style="justify-content:center"><button class="btn primary" id="again">${kind==='path'?(S.path&&S.path.n>PATH_LEN?'🏆 סיום':'לשיעור הבא ←'):'עוד סבב'}</button><button class="btn ghost" onclick="home()">לבית</button></div>
   ${(kind==='cloze'||kind==='trans')?`<div class="needs-ai" style="justify-content:center"><button class="btn accent" id="moreai">✨ צור לי תרגילים חדשים עם AI</button></div>`:''}
   </div>`);
@@ -1034,7 +1038,7 @@ function runSession({title,items,kind,skill,onDone}){
   q.render($('#q'),(ok,info={})=>{
    if(answered)return;answered=true;
    if(info.intro){addXP(3);ses.xp+=3;return next();}
-   ses.answered++;if(ok)ses.ok++;
+   ses.answered++;if(ok)ses.ok++;else if(info.correct&&info.prompt&&ses.wrong.length<12)ses.wrong.push([info.prompt,info.correct]);
    const sk=q.skill||skill;const xp=record(sk,ok,q.lvl,info);ses.xp+=xp;
    feedback(ok,info,xp,sk,next,()=>{ses.ok++;});
   });};
@@ -1062,10 +1066,10 @@ function makeVocabQ(w,type,noSrs){
  if(!type){const box=r?r.box:0;const opts=box<=2?['mcq','mcq','listen','spell']:['mcq','listen','spell','spell'];if(dictCap)opts.push('say');type=pick(opts);}
  const base={lvl:w.lvl,skill:type==='listen'?'listening':type==='say'?'speaking':'vocab'};
  const done=(ans,ok,given)=>{if(!noSrs)srs(w.en,ok);ans(ok,{kind:'vocab',ref:w.en,prompt:w.en,correct:type==='mcq'?w.he:w.en,given,
-   extra:`<div class="explain"><b class="en">${esc(w.en)}</b> = ${esc(w.he)}<div class="ex en">${esc(w.ex)} ${spk(w.ex,'sm')}</div></div>`});};
+   extra:`<div class="explain"><b class="en">${esc(w.en)}</b> = ${esc(w.he)}${w.ex?`<div class="ex en">${esc(w.ex)} ${spk(w.ex,'sm')}</div>`:''}</div>`});};
  if(type==='intro')return{...base,render(el,ans){
   el.innerHTML=`<div class="pill">✨ מילה חדשה · ${TAGS[w.tag]||''}</div><div class="prompt"><span class="big en">${esc(w.en)}</span>${spk(w.en)}${spkSlow(w.en)}</div>
-  <div class="he-big" style="text-align:center">${esc(w.he)}</div><div class="ex en" style="justify-content:center;margin:12px 0">${esc(w.ex)} ${spk(w.ex,'sm')}</div>
+  <div class="he-big" style="text-align:center">${esc(w.he)}</div>${w.ex?`<div class="ex en" style="justify-content:center;margin:12px 0">${esc(w.ex)} ${spk(w.ex,'sm')}</div>`:'<div style="height:12px"></div>'}
   <div style="text-align:center" id="say"><button class="mic needs-mic">🎤 נסה להגיד את המילה</button><div class="heard"></div></div>
   <div class="fbtn" style="justify-content:center"><button class="btn primary" id="gotit">הבנתי, המשך ←</button></div>`;
   if(S.settings.autoSpeak)setTimeout(()=>speak(w.en),250);
@@ -1086,10 +1090,10 @@ function makeVocabQ(w,type,noSrs){
   <input class="inp en" id="in" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="type here..."><div class="fbtn"><button class="btn primary" id="chk">בדוק</button><button class="btn ghost" id="hint">💡 רמז</button><button class="btn ghost" id="idk">לא יודע</button></div>`;
   const inp=$('#in',el);setTimeout(()=>inp.focus(),50);
   const check=()=>{const g=inp.value.trim();if(!g)return;const s=sim(normEn(g),normEn(w.en));const ok=s>=0.85;inp.disabled=true;
-   srs(w.en,ok&&s===1?true:ok);ans(ok,{kind:'vocab',ref:w.en,prompt:w.he,correct:w.en,given:g,almost:ok&&s<1,extra:`<div class="ex en">${esc(w.ex)} ${spk(w.ex,'sm')}</div>`});};
+   srs(w.en,ok&&s===1?true:ok);ans(ok,{kind:'vocab',ref:w.en,prompt:w.he,correct:w.en,given:g,almost:ok&&s<1,extra:`${w.ex?`<div class="ex en">${esc(w.ex)} ${spk(w.ex,'sm')}</div>`:''}`});};
   $('#chk',el).onclick=check;inp.onkeydown=e=>{if(e.key==='Enter'){e.preventDefault();check();}};
   $('#hint',el).onclick=()=>{inp.placeholder=w.en[0]+'_'.repeat(w.en.length-1)+`  (${w.en.length})`;speak(w.en);};
-  $('#idk',el).onclick=()=>{inp.disabled=true;srs(w.en,false);ans(false,{kind:'vocab',ref:w.en,prompt:w.he,correct:w.en,given:'',extra:`<div class="ex en">${esc(w.ex)} ${spk(w.ex,'sm')}</div>`});};}};
+  $('#idk',el).onclick=()=>{inp.disabled=true;srs(w.en,false);ans(false,{kind:'vocab',ref:w.en,prompt:w.he,correct:w.en,given:'',extra:`${w.ex?`<div class="ex en">${esc(w.ex)} ${spk(w.ex,'sm')}</div>`:''}`});};}};
  if(type==='say')return{...base,render(el,ans){
   el.innerHTML=`<p class="muted" style="text-align:center">הקשב, ואז אמור את המילה בקול</p><div class="prompt"><span class="big en">${esc(w.en)}</span>${spk(w.en)}${spkSlow(w.en)}</div><div style="text-align:center">${esc(w.he)}</div>
   <div style="text-align:center;margin-top:14px" id="say"><button class="mic">🎤 לחץ ודבר</button><div class="heard"></div><button class="btn ghost small" id="skip" style="margin-top:8px">לא יכול לדבר עכשיו</button></div>`;
@@ -1796,6 +1800,118 @@ async function openClass(code){
  $('#cshare').onclick=async()=>{try{await navigator.clipboard.writeText(share);toast('✅ ההזמנה הועתקה – הדביקו בוואטסאפ של הכיתה');}catch(e){toast('קוד הכיתה: '+code);}};
  $('#cmsave').onclick=async()=>{try{await api('/class/message',{code,key:c.key,message:$('#cmsg').value.trim()});toast('✅ ההודעה נשלחה לכיתה');}catch(e){classErr(e);}};
  $$('[data-rm]').forEach(b=>b.onclick=async()=>{if(b.dataset.armed){try{await api('/class/remove',{code,key:c.key,id:b.dataset.rm});openClass(code);}catch(e){classErr(e);}}else{b.dataset.armed=1;b.textContent='בטוח?';b.style.color='var(--bad)';}});}
+
+/* ====================== EXAM PREP (my word tests) ====================== */
+const HEB=/[֐-׿]/;
+function examWords(t){return t.words.map(en=>allWords().find(w=>w.en.toLowerCase()===en.toLowerCase())).filter(Boolean);}
+function examReady(t){const ws=examWords(t);if(!ws.length)return 0;return Math.round(ws.filter(w=>S.words[w.en]&&S.words[w.en].box>=3).length/ws.length*100);}
+function daysLeft(d){if(!d)return null;const t=new Date(d+'T00:00:00'),n=new Date();n.setHours(0,0,0,0);return Math.round((t-n)/DAY);}
+function daysTxt(n){if(n===null)return'';if(n<0)return'המבחן עבר';if(n===0)return'המבחן היום! 💪';if(n===1)return'המבחן מחר';return`עוד ${n} ימים`;}
+function parseWordLines(txt){
+ const out=[];
+ for(let line of txt.split(/\n|;/)){line=line.replace(/^\s*\d+[.)]\s*/,'').trim();if(!line)continue;
+  let parts=line.split(/\s*(?:\t|=|–|—|:|\s-\s|,)\s*/).filter(Boolean);
+  if(parts.length===1&&/\s-/.test(line))parts=line.split('-').map(x=>x.trim()).filter(Boolean);
+  let en=parts[0]||'',he=parts.slice(1).join(', ');
+  if(HEB.test(en)&&!HEB.test(he)){[en,he]=[he,en];}
+  en=en.replace(/[^\w\s'’-]/g,'').trim();if(!en||HEB.test(en))continue;
+  out.push({en,he:he.trim()});}
+ return out;}
+async function fillTranslations(items,onProgress){
+ const need=items.filter(x=>!x.he||!x.ex);
+ if(!need.length)return items;
+ if(aiReady()){try{const r=await ai(`For each English word or phrase below, give a short Hebrew translation (the most common meaning for a student) and one simple example sentence in English (CEFR ${S.level}). Return only a JSON array in the same order: [{"en":"...","he":"...","ex":"..."}]
+Words: ${JSON.stringify(need.map(x=>x.en))}`);
+  if(Array.isArray(r))need.forEach((x,i)=>{const m=r.find(y=>y&&String(y.en||'').toLowerCase()===x.en.toLowerCase())||r[i];if(m){if(!x.he&&m.he)x.he=m.he;if(!x.ex&&m.ex)x.ex=m.ex;}});
+  return items;}catch(e){}}
+ let i=0;
+ for(const x of need.filter(x=>!x.he)){i++;onProgress&&onProgress(i,need.length);
+  try{const r=await withTimeout(fetch('https://api.mymemory.translated.net/get?q='+encodeURIComponent(x.en)+'&langpair=en|he'),8000);const j=await r.json();const he=j&&j.responseData&&j.responseData.translatedText;
+   if(he&&!/MYMEMORY|INVALID/i.test(he)&&he.toLowerCase()!==x.en.toLowerCase())x.he=he;}catch(e){}}
+ return items;}
+function addWordsToTest(t,items){
+ let added=0;
+ for(const x of items){if(!x.en)continue;const key=x.en.toLowerCase();
+  let w=allWords().find(y=>y.en.toLowerCase()===key);
+  if(!w){if(!x.he)continue;w={en:x.en,he:x.he,ex:x.ex||'',lvl:S.level,tag:'custom',custom:true,topic:'exam:'+t.id};S.custom.words.push(w);}
+  if(!t.words.some(e=>e.toLowerCase()===key)){t.words.push(w.en);added++;}}
+ save();return added;}
+function examHome(){
+ S.tests=S.tests||[];
+ view(`<div class="stack"><h2>📝 הכנה למבחן</h2><p class="muted" style="margin-top:-8px">יש לך מבחן באוצר מילים? מכניסים את רשימת המילים ותאריך – ו-Tuki דואג שתהיי מוכנה.</p>
+ <button class="btn primary wide" id="exnew">➕ מבחן חדש</button>
+ ${S.tests.length?S.tests.map(t=>{const r=examReady(t),d=daysLeft(t.date);return`<button class="mod" style="min-height:88px" data-ex="${t.id}"><div class="row" style="width:100%"><span class="t">${esc(t.name)}</span><span class="pill" style="margin-inline-start:auto">${t.words.length} מילים</span></div>
+ <div class="row" style="width:100%"><div class="sbar"><i style="width:${r}%"></i></div><b>${r}%</b></div><span class="d">מוכנות · ${daysTxt(d)||'בלי תאריך'}</span></button>`;}).join(''):'<div class="card muted" style="text-align:center">עוד אין מבחנים. צרו את הראשון 👆</div>'}</div>`,'exam');
+ $('#exnew').onclick=()=>{const t={id:Date.now().toString(36),name:'מבחן באנגלית',date:'',words:[],created:now()};S.tests.unshift(t);save();examEdit(t.id,true);};
+ $$('[data-ex]').forEach(b=>b.onclick=()=>examView(b.dataset.ex));}
+function examEdit(id,isNew){
+ const t=(S.tests||[]).find(x=>x.id===id);if(!t)return examHome();
+ const ws=examWords(t);
+ view(`<div class="stack"><div class="ses-head"><button class="iconbtn" id="exback">→</button><h2 style="margin:0">${isNew?'מבחן חדש':'עריכת מבחן'}</h2></div>
+ <div class="card stack"><label class="small">שם המבחן<input class="inp" id="exname" value="${esc(t.name)}" style="margin-top:4px"></label>
+ <label class="small">תאריך המבחן<input class="inp" type="date" id="exdate" value="${esc(t.date||'')}" style="margin-top:4px"></label></div>
+ <div class="card stack"><h3>➕ הוספת מילים</h3>
+ <p class="small muted" style="margin:0">מדביקים רשימה – מילה בכל שורה. אפשר עם תרגום (<span class="en">apple - תפוח</span>) או בלי, ואז התרגום יתווסף לבד.</p>
+ <textarea class="inp en" id="exlist" style="min-height:130px" placeholder="achieve - להשיג&#10;opportunity&#10;improve = לשפר"></textarea>
+ <button class="btn primary" id="exadd">הוסף לרשימה</button><div id="exst" class="small"></div></div>
+ <div class="card"><h3>📋 המילים במבחן (${ws.length})</h3>${ws.length?ws.map(w=>`<div class="mist"><div><b class="en">${esc(w.en)}</b> – <span>${esc(w.he)}</span>${w.custom?` <button class="btn ghost small" data-edit="${esc(w.en)}" style="padding:2px 8px">✏️</button>`:''}</div><div class="row" style="flex-wrap:nowrap">${spk(w.en,'sm')}<button class="iconbtn" data-del="${esc(w.en)}" title="הסר" style="font-size:14px">✕</button></div></div>`).join(''):'<p class="muted">הרשימה ריקה.</p>'}</div>
+ <div class="row"><button class="btn primary" id="exsave">💾 שמור ${ws.length?'והתחל ללמוד':''}</button><button class="btn ghost" id="exdel" style="color:var(--bad);margin-inline-start:auto">מחק מבחן</button></div></div>`,'examedit');
+ const keep=()=>{t.name=$('#exname').value.trim()||'מבחן';t.date=$('#exdate').value||'';save();};
+ $('#exback').onclick=()=>{keep();t.words.length?examView(id):examHome();};
+ $('#exsave').onclick=()=>{keep();t.words.length?examView(id):toast('הוסיפו מילים לרשימה');};
+ $('#exadd').onclick=async()=>{keep();const items=parseWordLines($('#exlist').value);if(!items.length){toast('לא מצאתי מילים באנגלית');return;}
+  const b=$('#exadd');b.disabled=true;b.innerHTML='<span class="loader"></span> מוסיף...';
+  items.forEach(x=>{const f=allWords().find(y=>y.en.toLowerCase()===x.en.toLowerCase());if(f){x.he=x.he||f.he;x.ex=f.ex;}});
+  await fillTranslations(items,(i,n)=>{$('#exst').textContent=`מתרגם ${i}/${n}...`;});
+  const missing=items.filter(x=>!x.he&&!allWords().some(y=>y.en.toLowerCase()===x.en.toLowerCase())).map(x=>x.en);
+  const n=addWordsToTest(t,items);toast(`נוספו ${n} מילים ✓`);examEdit(id);
+  if(missing.length)setTimeout(()=>{const st=$('#exst');if(st)st.innerHTML=`<span style="color:var(--bad)">לא הצלחתי לתרגם: ${esc(missing.join(', '))} – הוסיפו אותן עם תרגום (word - תרגום)</span>`;},50);};
+ $$('[data-del]').forEach(b=>b.onclick=()=>{t.words=t.words.filter(e=>e!==b.dataset.del);save();examEdit(id);});
+ $$('[data-edit]').forEach(b=>b.onclick=()=>{const w=S.custom.words.find(x=>x.en===b.dataset.edit);if(!w)return;const row=b.parentElement;
+  row.innerHTML=`<b class="en">${esc(w.en)}</b> – <input class="inp" style="display:inline-block;width:auto;font-size:15px;padding:6px 10px" value="${esc(w.he)}"> <button class="btn primary small" style="padding:4px 10px">✓</button>`;
+  row.querySelector('button').onclick=()=>{const v=row.querySelector('input').value.trim();if(v){w.he=v;save();}examEdit(id);};});
+ $('#exdel').onclick=()=>{const b=$('#exdel');if(b.dataset.armed){S.tests=S.tests.filter(x=>x.id!==id);save();examHome();}else{b.dataset.armed=1;b.textContent='בטוח? לחצו שוב';}};}
+function examView(id){
+ const t=(S.tests||[]).find(x=>x.id===id);if(!t)return examHome();
+ const ws=examWords(t),r=examReady(t),d=daysLeft(t.date);
+ const weak=ws.filter(w=>!S.words[w.en]||S.words[w.en].box<3);
+ const perDay=d&&d>0?Math.ceil(weak.length/d):weak.length;
+ view(`<div class="stack"><div class="ses-head"><button class="iconbtn" onclick="examHome()">→</button><h2 style="margin:0">📝 ${esc(t.name)}</h2><button class="btn ghost small" style="margin-inline-start:auto" id="exed">✏️ עריכה</button></div>
+ <div class="card hero"><div class="hero-row"><div class="ring"><svg width="74" height="74" viewBox="0 0 74 74"><circle cx="37" cy="37" r="32" fill="none" stroke="rgba(255,255,255,.25)" stroke-width="7"/><circle cx="37" cy="37" r="32" fill="none" stroke="#fff" stroke-width="7" stroke-linecap="round" stroke-dasharray="${2*Math.PI*32}" stroke-dashoffset="${2*Math.PI*32*(1-r/100)}" transform="rotate(-90 37 37)"/></svg><b>${r}%</b></div>
+ <div style="flex:1"><h2 style="margin:0;color:#fff">${r>=90?'את מוכנה! 🎉':'מוכנות למבחן'}</h2><div class="muted">${t.words.length} מילים · ${daysTxt(d)||'בלי תאריך'}</div>
+ ${weak.length&&d!==null&&d>=0?`<div class="muted small">כדי להספיק: ${perDay} מילים חדשות ביום</div>`:''}</div></div></div>
+ <div class="grid">
+ <button class="mod" id="exlearn"><span class="ic">📚</span><span class="t">ללמוד</span><span class="d">${weak.length?`${weak.length} מילים שעוד לא סגורות`:'חזרה על כל המילים'}</span></button>
+ <button class="mod" id="extest"><span class="ic">🎯</span><span class="t">מבחן לדוגמה</span><span class="d">${t.lastScore!=null?`ציון אחרון: ${t.lastScore}`:'בודקים אם את מוכנה'}</span></button>
+ <button class="mod" id="excards"><span class="ic">🃏</span><span class="t">כרטיסיות</span><span class="d">מעבר מהיר על כל הרשימה</span></button>
+ <button class="mod" id="exlisten"><span class="ic">🎧</span><span class="t">שמיעה</span><span class="d">שומעים ומזהים את המילה</span></button></div>
+ <div class="card"><h3>מצב כל מילה</h3>${ws.map(w=>{const b=S.words[w.en]?S.words[w.en].box:0;const st=b>=3?['✅','יודעת']:b>=1?['🟡','בתהליך']:['⚪','חדשה'];return`<div class="mist"><div><b class="en">${esc(w.en)}</b> – ${esc(w.he)}</div><div class="row" style="flex-wrap:nowrap"><span class="small">${st[0]} ${st[1]}</span>${spk(w.en,'sm')}</div></div>`;}).join('')}</div></div>`,'examview');
+ $('#exed').onclick=()=>examEdit(id);
+ $('#exlearn').onclick=()=>open_('exam-learn-'+id);
+ $('#extest').onclick=()=>open_('exam-test-'+id);
+ $('#excards').onclick=()=>examCards(id,0,false);
+ $('#exlisten').onclick=()=>open_('exam-listen-'+id);}
+function examSession(mode,id){
+ const t=(S.tests||[]).find(x=>x.id===id);if(!t)return examHome();
+ const ws=examWords(t);if(!ws.length)return examEdit(id);
+ if(mode==='learn'){const weak=ws.filter(w=>!S.words[w.en]||S.words[w.en].box<3);const pick=(weak.length?weak:shuffle(ws)).slice(0,10);
+  return runSession({title:`📚 ${t.name}`,kind:'exam-learn-'+id,skill:'vocab',items:vocabItems(10,pick),onDone:()=>{}});}
+ if(mode==='listen')return runSession({title:`🎧 ${t.name}`,kind:'exam-listen-'+id,skill:'listening',items:shuffle(ws).slice(0,10).map(w=>()=>makeVocabQ(w,'listen'))});
+ const qs=shuffle(ws).slice(0,Math.min(20,ws.length)).map((w,i)=>()=>makeVocabQ(w,i%3===2?'spell':'mcq'));
+ runSession({title:`🎯 מבחן לדוגמה · ${t.name}`,kind:'exam-test-'+id,skill:'vocab',items:qs,onDone:ses=>{t.lastScore=Math.round(ses.ok/Math.max(1,ses.answered)*100);save();}});}
+function examCards(id,i,flipped){
+ const t=(S.tests||[]).find(x=>x.id===id);if(!t)return examHome();const ws=examWords(t);if(!ws.length)return examEdit(id);
+ i=(i+ws.length)%ws.length;const w=ws[i];
+ view(`<div class="stack"><div class="ses-head"><button class="iconbtn" onclick="examView('${id}')">✕</button><div class="bar"><i style="width:${(i+1)/ws.length*100}%"></i></div><span class="muted small">${i+1}/${ws.length}</span></div>
+ <button class="card" id="cardf" style="min-height:260px;width:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px">
+ ${flipped?`<div class="he-big">${esc(w.he)}</div>${w.ex?`<div class="en muted">${esc(w.ex)}</div>`:''}`:`<div class="big en">${esc(w.en)}</div>`}<div class="small muted">לחצו כדי ${flipped?'לחזור':'לראות תרגום'}</div></button>
+ <div class="row" style="justify-content:center">${spk(w.en)}<button class="btn ghost" id="cprev">→ הקודמת</button><button class="btn primary" id="cnext">הבאה ←</button></div>
+ <div class="row" style="justify-content:center"><button class="btn ghost small" id="cknow">✅ יודעת</button><button class="btn ghost small" id="cdont">❌ עוד לא</button></div></div>`,'cards');
+ if(!flipped&&S.settings.autoSpeak)setTimeout(()=>speak(w.en),200);
+ $('#cardf').onclick=()=>examCards(id,i,!flipped);
+ $('#cprev').onclick=()=>examCards(id,i-1,false);$('#cnext').onclick=()=>examCards(id,i+1,false);
+ $('#cknow').onclick=()=>{srs(w.en,true);save();examCards(id,i+1,false);};
+ $('#cdont').onclick=()=>{srs(w.en,false);save();examCards(id,i+1,false);};}
 
 /* ====================== BOOT ====================== */
 refreshCaps();renderTop();home();restoreBackup();setTimeout(()=>syncClass(true),3000);
