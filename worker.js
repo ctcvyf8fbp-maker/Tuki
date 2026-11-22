@@ -8,14 +8,15 @@
 //   MODEL           (Text, לא חובה) – ברירת מחדל: gemini-flash-latest
 // Bindings:
 //   TUKI_KV         (KV namespace) – בשביל כיתות ולוח מורה
+//   AI              (Workers AI)   – בשביל הקול האנושי (הקראה)
 
 export default {
-  async fetch(req, env) {
+  async fetch(req, env, ctx) {
     const origin = req.headers.get('Origin') || '';
     const allowed = env.ALLOWED_ORIGIN || '*';
     const cors = {
       'Access-Control-Allow-Origin': allowed === '*' ? '*' : allowed,
-      'Access-Control-Allow-Methods': 'POST, OPTIONS',
+      'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
       'Access-Control-Allow-Headers': 'content-type',
       'Vary': 'Origin',
     };
@@ -23,13 +24,18 @@ export default {
       new Response(JSON.stringify(obj), { status, headers: { ...cors, 'content-type': 'application/json' } });
 
     if (req.method === 'OPTIONS') return new Response(null, { headers: cors });
-    if (req.method !== 'POST') return json({ ok: true, name: 'Tuki AI', classes: !!env.TUKI_KV });
+    const url = new URL(req.url);
+    if (req.method === 'GET' && url.pathname === '/tts') {
+      if (allowed !== '*' && origin !== allowed) return json({ error: 'origin' }, 403);
+      return tts(url, env, ctx, cors, json);
+    }
+    if (req.method !== 'POST') return json({ ok: true, name: 'Tuki AI', classes: !!env.TUKI_KV, voice: !!env.AI });
     if (allowed !== '*' && origin !== allowed) return json({ error: 'origin' }, 403);
 
     let body;
     try { body = await req.json(); } catch { return json({ error: 'bad_json' }, 400); }
 
-    const path = new URL(req.url).pathname;
+    const path = url.pathname;
     if (path.startsWith('/class')) return classApi(path, body || {}, env, json);
 
     // ---- AI ----
@@ -50,6 +56,36 @@ export default {
     return json({ text });
   },
 };
+
+// ---------------- Natural voice (Workers AI, cached) ----------------
+async function tts(url, env, ctx, cors, json) {
+  if (!env.AI) return json({ error: 'no_ai' }, 500);
+  const text = (url.searchParams.get('t') || '').slice(0, 1200).trim();
+  if (!text) return json({ error: 'no_text' }, 400);
+  const model = env.TTS_MODEL || '@cf/deepgram/aura-1';
+  const cache = caches.default;
+  const key = new Request('https://tuki-tts.cache/' + encodeURIComponent(model) + '/' + encodeURIComponent(text));
+  const hdr = ct => ({ ...cors, 'content-type': ct || 'audio/mpeg', 'cache-control': 'public, max-age=2592000' });
+  const hit = await cache.match(key);
+  if (hit) return new Response(hit.body, { headers: hdr(hit.headers.get('content-type')) });
+  let audio, ct = 'audio/mpeg';
+  try {
+    const r = await env.AI.run(model, { text }, { returnRawResponse: true });
+    if (r instanceof Response) {
+      if (!r.ok) return json({ error: 'tts' }, 502);
+      ct = r.headers.get('content-type') || ct;
+      audio = await r.arrayBuffer();
+    } else if (r && r.audio) {
+      audio = Uint8Array.from(atob(r.audio), c => c.charCodeAt(0)).buffer;
+    } else {
+      audio = await new Response(r).arrayBuffer();
+    }
+  } catch (e) {
+    return json({ error: 'tts', detail: String(e).slice(0, 200) }, 502);
+  }
+  ctx.waitUntil(cache.put(key, new Response(audio, { headers: { 'content-type': ct, 'cache-control': 'public, max-age=2592000' } })));
+  return new Response(audio, { headers: hdr(ct) });
+}
 
 // ---------------- Classes ----------------
 const CODE_ABC = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';

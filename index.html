@@ -800,7 +800,7 @@ function pickVoice(){
  const pref=[/Samantha/i,/Google US English/i,/Microsoft (Aria|Jenny|Guy).*Online/i,/Alex/i,/Daniel/i];
  for(const p of pref){const v=voices.find(v=>p.test(v.name));if(v)return v;}
  return voices.find(v=>/en[-_]US/i.test(v.lang))||voices[0]||null;}
-function speak(text,slow,onend){
+function browserSpeak(text,slow,onend){
  if(!text){onend&&onend();return;}
  let done=false;const fin=()=>{if(done)return;done=true;onend&&onend();};
  try{if(!('speechSynthesis' in window)){if(!onend)toast('הקראה לא זמינה בדפדפן הזה');fin();return;}
@@ -808,7 +808,30 @@ function speak(text,slow,onend){
   const v=pickVoice();if(v){u.voice=v;u.lang=v.lang;}
   if(onend){u.onend=fin;u.onerror=fin;setTimeout(fin,Math.max(2500,text.length*95/(u.rate||1))+1500);}
   speechSynthesis.speak(u);}catch(e){fin();}}
-function stopSpeak(){try{speechSynthesis.cancel();}catch(e){}}
+let actx=null,curSrc=null,speakTok=0,ttsFails=0;const ttsCache=new Map();
+function unlockAudio(){try{if(!actx){const AC=window.AudioContext||window.webkitAudioContext;if(!AC)return;actx=new AC();}if(actx.state==='suspended')actx.resume();}catch(e){}}
+addEventListener('pointerdown',unlockAudio,true);addEventListener('touchend',unlockAudio,true);addEventListener('keydown',unlockAudio,true);
+const naturalOn=()=>!!(typeof PROXY_URL!=='undefined'&&PROXY_URL&&S.settings.natural!==false&&ttsFails<3);
+function getTTS(text){
+ const k=text.trim();if(ttsCache.has(k))return ttsCache.get(k);
+ const p=(async()=>{const r=await withTimeout(fetch(PROXY_URL+'/tts?t='+encodeURIComponent(k)),10000);if(!r.ok)throw new Error('tts');
+  const ab=await r.arrayBuffer();unlockAudio();if(!actx)throw new Error('noctx');
+  return await new Promise((res,rej)=>actx.decodeAudioData(ab,res,rej));})();
+ ttsCache.set(k,p);p.then(()=>{ttsFails=0;},()=>{ttsCache.delete(k);ttsFails++;});return p;}
+function speak(text,slow,onend){
+ if(!text){onend&&onend();return;}
+ const tok=++speakTok;
+ if(!naturalOn())return browserSpeak(text,slow,onend);
+ unlockAudio();
+ getTTS(text).then(buf=>{
+  if(tok!==speakTok)return;
+  stopSpeak(true);if(actx.state==='suspended')actx.resume();
+  const src=actx.createBufferSource();src.buffer=buf;src.playbackRate.value=slow?0.82:1;src.connect(actx.destination);
+  let done=false;const fin=()=>{if(done)return;done=true;if(curSrc===src)curSrc=null;onend&&onend();};
+  src.onended=fin;curSrc=src;src.start();
+ }).catch(()=>{if(tok===speakTok)browserSpeak(text,slow,onend);});}
+function prefetchTTS(t){if(naturalOn()&&t)getTTS(t).catch(()=>{});}
+function stopSpeak(keepTok){if(!keepTok)speakTok++;try{if(curSrc){curSrc.onended=null;curSrc.stop();curSrc=null;}}catch(e){}try{speechSynthesis.cancel();}catch(e){}}
 
 /* ====================== SPEECH IN (browser) ====================== */
 const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
@@ -1118,10 +1141,23 @@ function makeTransQ(t,dir){
   const inp=$('#in',el);setTimeout(()=>inp.focus(),50);
   const info=(g,ok,almost,idx)=>({kind:'trans',ref:t.he[0]+'|'+dir,dir,prompt:src,correct:acc[idx],given:g,almost,
    explain:acc.length>1?'גם נכון: '+acc.filter((_,i)=>i!==idx).join(' / '):'',
-   aiCheck:g?()=>ai(`A native Hebrew speaker learning English (CEFR ${S.level}) translated this sentence.\nSource (${dir==='he2en'?'Hebrew':'English'}): "${src}"\nTheir ${dir==='he2en'?'English':'Hebrew'} translation: "${g}"\nReference translations: ${JSON.stringify(acc)}\nIs their translation correct and natural enough to be accepted (meaning preserved, grammar correct; minor stylistic differences are fine)? Return only JSON: {"correct": boolean, "feedback_he": "one or two short sentences in Hebrew explaining why, and the fix if wrong"}`):null});
-  const check=()=>{const g=inp.value.trim();if(!g)return;const {best,idx}=bestMatch(g,acc,norm);const ok=best>=0.85;inp.disabled=true;ans(ok,info(g,ok,ok&&best<0.97,idx));};
+   aiCheck:g?()=>judgeTrans(src,g,acc,dir):null});
+  const check=async()=>{const g=inp.value.trim();if(!g||inp.disabled)return;const {best,idx}=bestMatch(g,acc,norm);inp.disabled=true;
+   if(best>=0.85)return ans(true,info(g,true,best<0.97,idx));
+   if(aiReady()){const cb=$('#chk',el);cb.disabled=true;cb.innerHTML='<span class="loader"></span> בודק משמעות...';
+    try{const r=await judgeTrans(src,g,acc,dir);const i=info(g,!!r.correct,!!r.correct,idx);i.explain=(r.correct?'✅ ':'')+(r.feedback_he||'')+(i.explain?' · '+i.explain:'');if(r.correct)i.aiCheck=null;return ans(!!r.correct,i);}catch(e){}}
+   ans(false,info(g,false,false,idx));};
   $('#chk',el).onclick=check;inp.onkeydown=e=>{if(e.key==='Enter'){e.preventDefault();check();}};
   $('#idk',el).onclick=()=>{inp.disabled=true;ans(false,info('',false,false,0));};}};}
+function judgeTrans(src,g,acc,dir){return ai(`You are a kind, lenient English teacher checking a translation by a native Hebrew speaker (CEFR ${S.level}).
+Source (${dir==='he2en'?'Hebrew':'English'}): "${src}"
+Learner's ${dir==='he2en'?'English':'Hebrew'} translation: "${g}"
+Example correct translations: ${JSON.stringify(acc)}
+Judge by MEANING. Mark it correct if the meaning is right, even when the wording differs from the examples.
+Be lenient about: masculine/feminine forms, synonyms, word order, small spelling mistakes, and everyday Hebrew phrasing that conveys the same idea (for example "אם ידעתי הייתי מגיע" is an acceptable translation of "If I had known, I would have come").
+${dir==='he2en'?'For English answers, accept small grammar slips if the meaning is clear, but mention the correct form.':''}
+Mark it wrong only if the meaning is different or important information is missing.
+Return only JSON: {"correct": boolean, "feedback_he": "one short, encouraging sentence in Hebrew (if correct, you may mention a more precise wording; if wrong, explain what is missing)"}`);}
 function dictPool(lvl){const s=WORDS.filter(w=>w.lvl===lvl).map(w=>w.ex).concat(CLOZE.filter(c=>c.lvl===lvl).map(c=>c.s.replace('___',c.a)));return s;}
 function makeDictQ(sent,lvl){return{lvl,skill:'listening',render(el,ans){
  el.innerHTML=`<p class="muted" style="text-align:center">הקשב וכתוב את המשפט באנגלית</p><div class="prompt"><button class="spk" style="width:72px;height:72px;font-size:30px" data-say="${esc(sent)}">🔊</button>${spkSlow(sent)}</div>
@@ -1473,7 +1509,8 @@ function settingsView(){
  view(`<div class="stack"><h2>⚙️ הגדרות</h2><div class="card">
  <label class="set">יעד יומי<select class="inp" id="sg">${[[50,'קליל · 5 דק׳'],[100,'רגיל · 10 דק׳'],[200,'רציני · 20 דק׳'],[300,'אינטנסיבי · 30 דק׳']].map(([v,l])=>`<option value="${v}" ${S.goal==v?'selected':''}>${l}</option>`).join('')}</select></label>
  <label class="set">מהירות הקראה<select class="inp" id="sr">${[[0.8,'איטי'],[0.9,'קצת איטי'],[1,'רגיל'],[1.15,'מהיר']].map(([v,l])=>`<option value="${v}" ${S.settings.rate==v?'selected':''}>${l}</option>`).join('')}</select></label>
- <label class="set">קול<span class="row"><select class="inp" id="sv" style="max-width:200px"><option value="">אוטומטי</option>${vopts}</select><button class="spk sm" data-say="Hello! Let's practice English together.">🔊</button></span></label>
+ <label class="set">קול גיבוי (של המכשיר)<span class="row"><select class="inp" id="sv" style="max-width:200px"><option value="">אוטומטי</option>${vopts}</select><button class="spk sm" data-say="Hello! Let's practice English together.">🔊</button></span></label>
+ <label class="set">🗣️ קול אנושי טבעי<input type="checkbox" id="snat" ${S.settings.natural!==false?'checked':''}></label>
  <label class="set">הקראה אוטומטית של מילים<input type="checkbox" id="sa" ${S.settings.autoSpeak?'checked':''}></label>
  <div class="set" style="display:block"><div style="margin-bottom:8px">רמה</div><div class="lvlpick">${LEVELS.map(l=>`<button class="${S.level===l?'on':''}" data-l="${l}"><b>${l}</b>${LVL_HE[l]}</button>`).join('')}</div></div>
  <div class="row" style="padding-top:14px"><button class="btn ghost" onclick="startPlacement()">🎯 מבחן רמה מחדש</button><button class="btn ghost" id="rst" style="color:var(--bad)">אפס התקדמות</button></div></div>
@@ -1494,6 +1531,7 @@ function settingsView(){
  $('#sr').onchange=e=>{S.settings.rate=+e.target.value;save();};
  $('#sv').onchange=e=>{S.settings.voiceName=e.target.value;save();speak("Hello! Let's practice English together.");};
  $('#sa').onchange=e=>{S.settings.autoSpeak=e.target.checked;save();};
+ $('#snat').onchange=e=>{S.settings.natural=e.target.checked;ttsFails=0;save();speak("Hello! Let's practice English together.");};
  $$('[data-l]').forEach(b=>b.onclick=()=>{S.level=b.dataset.l;S.recent=[];save();renderTop();settingsView();toast('הרמה עודכנה ל-'+S.level);});
  const as=$('#asave');if(as)as.onclick=async()=>{
   S.settings.aiKey=$('#akey').value.trim();const m=$('#amodel').value.trim();if(m)S.settings.aiModel=m;save();refreshCaps();
