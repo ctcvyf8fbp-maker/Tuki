@@ -1,4 +1,4 @@
-<p align="center"><img src="tuki-logo.png" width="140" alt="Tuki"></p>
+<p align="center"><img src="icon.svg" width="140" alt="Tuki"></p>
 
 # Tuki 🦜 – לימוד אנגלית
 
