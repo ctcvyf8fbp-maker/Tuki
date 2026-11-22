@@ -1954,5 +1954,16 @@ function examCards(id,i,flipped){
 /* ====================== BOOT ====================== */
 refreshCaps();renderTop();home();restoreBackup();setTimeout(()=>syncClass(true),3000);
 </script>
+</script>
+
+<script>
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('./sw.js')
+      .catch(err => console.error('SW registration failed:', err));
+  });
+}
+</script>
 </body>
 </html>
+
