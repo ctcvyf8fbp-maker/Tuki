@@ -811,13 +811,14 @@ function browserSpeak(text,slow,onend){
 let actx=null,curSrc=null,speakTok=0,ttsFails=0;const ttsCache=new Map();
 function unlockAudio(){try{if(!actx){const AC=window.AudioContext||window.webkitAudioContext;if(!AC)return;actx=new AC();}if(actx.state==='suspended')actx.resume();}catch(e){}}
 addEventListener('pointerdown',unlockAudio,true);addEventListener('touchend',unlockAudio,true);addEventListener('keydown',unlockAudio,true);
+const VOICE_LIST=[['luna','👩 לונה','אישה · אמריקאית'],['asteria','👩 אסטריה','אישה · אמריקאית'],['stella','👩 סטלה','אישה · אמריקאית'],['athena','👩 אתנה','אישה · בריטית'],['orion','👨 אוריון','גבר · אמריקאי'],['arcas','👨 ארקס','גבר · אמריקאי'],['perseus','👨 פרסאוס','גבר · אמריקאי'],['helios','👨 הליוס','גבר · בריטי']];
 const naturalOn=()=>!!(typeof PROXY_URL!=='undefined'&&PROXY_URL&&S.settings.natural!==false&&ttsFails<3);
 function getTTS(text){
- const k=text.trim();if(ttsCache.has(k))return ttsCache.get(k);
- const p=(async()=>{const r=await withTimeout(fetch(PROXY_URL+'/tts?t='+encodeURIComponent(k)),10000);if(!r.ok)throw new Error('tts');
+ const k=text.trim(),ck=(S.settings.speaker||'luna')+'|'+k;if(ttsCache.has(ck))return ttsCache.get(ck);
+ const p=(async()=>{const r=await withTimeout(fetch(PROXY_URL+'/tts?v='+encodeURIComponent(S.settings.speaker||'luna')+'&t='+encodeURIComponent(k)),10000);if(!r.ok)throw new Error('tts');
   const ab=await r.arrayBuffer();unlockAudio();if(!actx)throw new Error('noctx');
   return await new Promise((res,rej)=>actx.decodeAudioData(ab,res,rej));})();
- ttsCache.set(k,p);p.then(()=>{ttsFails=0;},()=>{ttsCache.delete(k);ttsFails++;});return p;}
+ ttsCache.set(ck,p);p.then(()=>{ttsFails=0;},()=>{ttsCache.delete(ck);ttsFails++;});return p;}
 function speak(text,slow,onend){
  if(!text){onend&&onend();return;}
  const tok=++speakTok;
@@ -1511,6 +1512,7 @@ function settingsView(){
  <label class="set">מהירות הקראה<select class="inp" id="sr">${[[0.8,'איטי'],[0.9,'קצת איטי'],[1,'רגיל'],[1.15,'מהיר']].map(([v,l])=>`<option value="${v}" ${S.settings.rate==v?'selected':''}>${l}</option>`).join('')}</select></label>
  <label class="set">קול גיבוי (של המכשיר)<span class="row"><select class="inp" id="sv" style="max-width:200px"><option value="">אוטומטי</option>${vopts}</select><button class="spk sm" data-say="Hello! Let's practice English together.">🔊</button></span></label>
  <label class="set">🗣️ קול אנושי טבעי<input type="checkbox" id="snat" ${S.settings.natural!==false?'checked':''}></label>
+ ${PROXY_URL?`<div class="set" style="display:block"><div style="margin-bottom:8px">🎙️ בחירת קול <span class="small muted">(לחצו כדי לשמוע)</span></div><div class="lvlpick">${VOICE_LIST.map(([id,he,sub])=>`<button class="${(S.settings.speaker||'luna')===id?'on':''}" data-voice="${id}" style="min-width:104px"><b style="font-size:16px">${he}</b><span class="small">${sub}</span></button>`).join('')}</div></div>`:''}
  <label class="set">הקראה אוטומטית של מילים<input type="checkbox" id="sa" ${S.settings.autoSpeak?'checked':''}></label>
  <div class="set" style="display:block"><div style="margin-bottom:8px">רמה</div><div class="lvlpick">${LEVELS.map(l=>`<button class="${S.level===l?'on':''}" data-l="${l}"><b>${l}</b>${LVL_HE[l]}</button>`).join('')}</div></div>
  <div class="row" style="padding-top:14px"><button class="btn ghost" onclick="startPlacement()">🎯 מבחן רמה מחדש</button><button class="btn ghost" id="rst" style="color:var(--bad)">אפס התקדמות</button></div></div>
@@ -1531,6 +1533,7 @@ function settingsView(){
  $('#sr').onchange=e=>{S.settings.rate=+e.target.value;save();};
  $('#sv').onchange=e=>{S.settings.voiceName=e.target.value;save();speak("Hello! Let's practice English together.");};
  $('#sa').onchange=e=>{S.settings.autoSpeak=e.target.checked;save();};
+ $$('[data-voice]').forEach(b=>b.onclick=()=>{S.settings.speaker=b.dataset.voice;S.settings.natural=true;ttsFails=0;save();$$('[data-voice]').forEach(x=>x.classList.toggle('on',x===b));speak("Hi! I'm your English teacher. Let's practice together.");});
  $('#snat').onchange=e=>{S.settings.natural=e.target.checked;ttsFails=0;save();speak("Hello! Let's practice English together.");};
  $$('[data-l]').forEach(b=>b.onclick=()=>{S.level=b.dataset.l;S.recent=[];save();renderTop();settingsView();toast('הרמה עודכנה ל-'+S.level);});
  const as=$('#asave');if(as)as.onclick=async()=>{
@@ -1954,16 +1957,5 @@ function examCards(id,i,flipped){
 /* ====================== BOOT ====================== */
 refreshCaps();renderTop();home();restoreBackup();setTimeout(()=>syncClass(true),3000);
 </script>
-</script>
-
-<script>
-if ('serviceWorker' in navigator) {
-  window.addEventListener('load', () => {
-    navigator.serviceWorker.register('./sw.js')
-      .catch(err => console.error('SW registration failed:', err));
-  });
-}
-</script>
 </body>
 </html>
-
