@@ -997,7 +997,7 @@ function applyLists(lists,lv){
  S.tests=S.tests.filter(t=>!t.tid||t.cc!==cc||ids.has(t.id));
  lists.forEach(l=>{let t=S.tests.find(x=>x.id==='T'+l.id);
   if(!t){t={id:'T'+l.id,tid:l.id,cc,name:'',date:'',words:[],created:now()};S.tests.unshift(t);fresh++;}
-  if(t.tver!==l.updated){t.name=l.name;t.date=l.date||'';t.text=l.text||'';t.qs=l.questions||[];t.words=[];t.tw={};(l.words||[]).forEach(w=>{if(w&&w.en)t.tw[w.en.toLowerCase()]={he:w.he||'',ex:w.ex||''};});addWordsToTest(t,(l.words||[]).map(w=>({en:w.en,he:w.he,ex:w.ex})));t.tver=l.updated;}});
+  if(t.tver!==l.updated){t.name=l.name;t.date=l.date||'';t.text=l.text||'';t.textHe=l.textHe||'';t.tr=l.tr!==false;t.qs=l.questions||[];t.words=[];t.tw={};(l.words||[]).forEach(w=>{if(w&&w.en)t.tw[w.en.toLowerCase()]={he:w.he||'',ex:w.ex||''};});addWordsToTest(t,(l.words||[]).map(w=>({en:w.en,he:w.he,ex:w.ex})));t.tver=l.updated;}});
  save();if(fresh)toast('📝 קיבלת רשימת מילים חדשה מהמורה!');if(currentView==='home')home();}
 const _classStats=classStats;
 window.classStats=function(){const d=_classStats();const lr={},hard={},ls={},lq={};
@@ -1020,12 +1020,12 @@ window.openClass=async function(code){G.lastView=null;await _openClass(code);if(
   const c=(S.teach||[]).find(x=>x.code===code);try{await api('/class/list/delete',{code,key:c.key,id:b.dataset.ld});toast('הרשימה נמחקה');openClass(code);}catch(e){classErr(e);}});};
 function tlEdit(code,L){
  const c=(S.teach||[]).find(x=>x.code===code);if(!c)return teacherHome();
- let items=L?L.words.map(w=>({...w})):[];let RQ=L&&L.questions?L.questions.slice():[];
+ let items=L?L.words.map(w=>({...w})):[];let RQ=L&&L.questions?L.questions.map(q=>normQ(q)).filter(Boolean):[];let heFor=L&&L.textHe?L.text:null;
  const draw=()=>{const box=$('#tlprev');if(!box)return;
   box.innerHTML=items.length?`<h3>👀 בדיקה לפני שליחה (${items.length})</h3><p class="small muted" style="margin:0">אפשר לתקן כל תרגום. מילה בלי תרגום מסומנת באדום.</p>`+items.map((w,i)=>`<div class="mist" style="align-items:center"><b class="en" style="min-width:90px">${esc(w.en)}</b><input class="inp" data-i="${i}" value="${esc(w.he||'')}" placeholder="תרגום" style="flex:1;font-size:15px;padding:7px 10px;${w.he?'':'border-color:var(--bad)'}"><span class="row" style="flex-wrap:nowrap">${spk(w.en,'sm')}<button class="iconbtn" data-x="${i}" style="font-size:14px">✕</button></span></div>`).join(''):'';
   $$('#tlprev input[data-i]').forEach(inp=>inp.oninput=()=>{items[+inp.dataset.i].he=inp.value.trim();inp.style.borderColor=inp.value.trim()?'':'var(--bad)';});
   $$('#tlprev [data-x]').forEach(b=>b.onclick=()=>{items.splice(+b.dataset.x,1);draw();});
-  $('#tlsend').hidden=!items.length;};
+  $('#tlsend').hidden=!items.length;cov();};
  view(`<div class="stack"><div class="ses-head"><button class="iconbtn" id="tlb">→</button><h2 style="margin:0">📝 ${L?'עריכת רשימה':'רשימת מילים חדשה'}</h2></div>
  <div class="card stack"><label class="small">שם הרשימה<input class="inp" id="tln" value="${esc(L?L.name:'')}" placeholder="למשל: מבחן יחידה 3" style="margin-top:4px"></label>
  <label class="small">תאריך יעד / מבחן (לא חובה)<input class="inp" type="date" id="tld" value="${esc(L?L.date:'')}" style="margin-top:4px"></label></div>
@@ -1033,17 +1033,68 @@ function tlEdit(code,L){
  <textarea class="inp en" id="tlt" style="min-height:130px" placeholder="airport - שדה תעופה&#10;luggage&#10;passport = דרכון"></textarea>
  <div class="row"><button class="btn ghost" id="tla">🔄 הוסף ותרגם</button><label class="btn ghost">📸 צילום דף מילים<input type="file" accept="image/*" capture="environment" id="tlcam" hidden></label></div><div id="tlst" class="small"></div></div>
  <div class="card stack" id="tlprev"></div>
- <details class="card" id="tlrd" ${L&&L.text?'open':''}><summary><b>📖 קטע קריאה לשיעור</b> <span class="small muted">(לא חובה)</span></summary><div class="stack" style="margin-top:10px">
- <p class="small muted" style="margin:0">אם יש קטע – נוסף לשיעור שלב "קריאה" עם שאלות. אפשר לכתוב בעצמך או לבקש מ-Tuki.</p>
- <div class="row"><select class="inp" id="tlrl" style="width:auto">${['A1','A2','B1','B2'].map(l=>`<option ${l==='A2'?'selected':''}>${l}</option>`).join('')}</select><button class="btn ghost" id="tlrg">🪄 צור קטע עם המילים</button></div>
- <textarea class="inp en" id="tlrt" dir="ltr" style="min-height:130px;text-align:left" placeholder="Reading text...">${esc(L&&L.text||'')}</textarea><div id="tlrq"></div></div></details>
+ <details class="card" id="tlrd" ${L&&L.text?'open':''}><summary><b>📖 הסיפור של השיעור</b> <span class="small muted">(לא חובה)</span></summary><div class="stack" style="margin-top:10px">
+ <p class="small muted" style="margin:0">סיפור או קטע קצר באנגלית, עם המילים של הרשימה. אפשר לכתוב או להדביק, לצלם מהספר, או לבקש מ-Tuki לכתוב. התלמידים קוראים, לוחצים על מילים כדי לשמוע ולראות תרגום, ועונים על שאלות קלילות.</p>
+ <div class="row"><label class="btn ghost">📸 צילום טקסט מהספר<input type="file" accept="image/*" capture="environment" id="tlrcam" hidden></label></div>
+ <textarea class="inp en" id="tlrt" dir="ltr" maxlength="3000" style="min-height:150px;text-align:left" placeholder="Write or paste the story here...">${esc(L&&L.text||'')}</textarea>
+ <div id="tlcov" class="small"></div>
+ <div class="row"><span class="small muted">אין לך סיפור?</span><select class="inp" id="tlrl" style="width:auto">${['A1','A2','B1','B2'].map(l=>`<option ${l==='A2'?'selected':''}>${l}</option>`).join('')}</select><button class="btn ghost" id="tlrg">🪄 כתוב סיפור עם המילים</button></div>
+ <label class="set">🇮🇱 התלמידים יכולים לראות תרגום לעברית<input type="checkbox" id="tltr" ${!L||L.tr!==false?'checked':''}></label>
+ <details id="tlhed"><summary class="small">התרגום לעברית (אפשר לבדוק ולתקן)</summary><div class="stack" style="margin-top:8px"><textarea class="inp" id="tlhe" style="min-height:90px" placeholder="אם ריק – Tuki יתרגם אוטומטית בשליחה">${esc(L&&L.textHe||'')}</textarea><button class="btn ghost small" id="tlheg">🪄 תרגם עכשיו</button></div></details>
+ <h3 style="margin:8px 0 0">❓ שאלות קלילות <span class="small muted">(עד 6)</span></h3>
+ <div id="tlrq"></div>
+ <div class="row"><button class="btn ghost small" data-qadd="tf">➕ נכון / לא נכון</button><button class="btn ghost small" data-qadd="mcq">➕ בחירה</button><button class="btn ghost small" data-qadd="fill">➕ השלמה מהסיפור</button><button class="btn accent small" id="tlqs">🪄 הצע שאלות</button></div>
+ <div id="tlqf"></div></div></details>
  <button class="btn primary" id="tlsend" style="font-size:19px" hidden>📤 שליחה לכיתה</button></div>`,'tledit');
  $('#tlb').onclick=()=>openClass(code);
- const drawQ=()=>{$('#tlrq').innerHTML=RQ.length?`<div class="small" style="font-weight:700">שאלות (${RQ.length})</div>`+RQ.map((q,i)=>`<div class="mist"><div class="en" style="direction:ltr;text-align:left">${i+1}. ${esc(q.q)}<div class="small muted">✓ ${esc(q.o[q.a]||'')}</div></div><button class="iconbtn" data-qx="${i}" style="font-size:14px">✕</button></div>`).join(''):'';
+ const story=()=>($('#tlrt').value||'').trim();
+ function cov(){const box=$('#tlcov');if(!box)return;const txt=story();if(!txt||!items.length){box.innerHTML='';return;}
+  const has=w=>new RegExp('\\b'+reEsc(w.en)+'(?:s|es|ed|d|ing)?\\b','i').test(txt);const yes=items.filter(has),no=items.filter(w=>!has(w));
+  box.innerHTML=`<div><b>מילים מהרשימה בסיפור: ${yes.length}/${items.length}</b></div><div class="row" style="gap:6px;margin-top:4px">${yes.map(w=>`<span class="pill">✅ <span class="en">${esc(w.en)}</span></span>`).join('')}${no.map(w=>`<span class="pill" style="opacity:.7">❌ <span class="en">${esc(w.en)}</span></span>`).join('')}</div>${no.length?'<div class="muted" style="margin-top:4px">❌ = המילה לא מופיעה בסיפור. זה בסדר – היא פשוט לא תהיה מודגשת.</div>':''}`;}
+ $('#tlrt').oninput=cov;$('#tlhe').oninput=()=>{heFor=null;};
+ const drawQ=()=>{$('#tlrq').innerHTML=RQ.length?RQ.map((q,i)=>`<div class="mist"><div style="flex:1"><span class="pill" style="font-size:12px">${Q_HE[q.t]}</span><div class="en" style="direction:ltr;text-align:left">${i+1}. ${esc(q.q)}</div><div class="small muted">✓ ${esc(q.t==='tf'?(q.a?'לא נכון (False)':'נכון (True)'):q.o[q.a]||'')}</div></div><button class="iconbtn" data-qx="${i}" style="font-size:14px">✕</button></div>`).join(''):'<p class="small muted" style="margin:0">עוד אין שאלות. אפשר בלי שאלות – אז התלמידים רק קוראים.</p>';
   $$('[data-qx]').forEach(b=>b.onclick=()=>{RQ.splice(+b.dataset.qx,1);drawQ();});};drawQ();
- $('#tlrg').onclick=async()=>{if(items.length<2)return toast('הוסיפו קודם מילים');if(!aiReady())return toast('צריך חיבור ל-AI');const b=$('#tlrg');b.disabled=true;b.innerHTML='<span class="loader"></span> כותב...';
-  try{const r=await makeReading(items.slice(0,15).map(w=>w.en),$('#tlrl').value);$('#tlrt').value=r.text||'';RQ=(r.questions||[]).filter(q=>q&&q.q&&q.o&&q.o.length>=2).slice(0,5);drawQ();toast('✅ הקטע מוכן – אפשר לערוך');}catch(e){aiErr(e);}
-  b.disabled=false;b.textContent='🪄 צור קטע עם המילים';};
+ const addQ=q=>{q=normQ(q);if(!q)return false;if(RQ.length>=6){toast('אפשר עד 6 שאלות');return false;}if(RQ.some(x=>x.q===q.q))return false;RQ.push(q);drawQ();return true;};
+ const lessonWords=()=>items.map(w=>w.en);
+ /* משפטים מהסיפור שיש בהם מילה מהרשימה – בשביל שאלות השלמה (בלי AI) */
+ const fillCands=()=>{const txt=story();if(!txt)return[];const out=[];const sents=txt.match(/[^.!?\n]+[.!?]?/g)||[];
+  sents.forEach(s=>{s=s.trim();if(s.split(/\s+/).length<4)return;for(const w of items.slice().sort((a,b)=>b.en.length-a.en.length)){const m=s.match(new RegExp('\\b'+reEsc(w.en)+'(?:s|es|ed|d|ing)?\\b','i'));
+   if(m){const others=shuffle(lessonWords().filter(x=>x.toLowerCase()!==w.en.toLowerCase())).slice(0,3);if(!others.length)return;const o=shuffle([m[0],...others]);out.push({t:'fill',q:s.replace(m[0],'_____'),o,a:o.indexOf(m[0])});return;}}});return out;};
+ const form=t=>{const f=$('#tlqf');
+  if(t==='tf'){f.innerHTML=`<div class="note stack"><b>➕ משפט נכון או לא נכון</b><span class="small">כתבו משפט באנגלית על הסיפור, וסמנו אם הוא נכון.</span><input class="inp en" id="qf1" dir="ltr" placeholder="Maya went to London." style="text-align:left"><div class="row"><label class="row" style="gap:6px"><input type="radio" name="qtf" value="0" checked> ✓ נכון</label><label class="row" style="gap:6px"><input type="radio" name="qtf" value="1"> ✗ לא נכון</label></div><div class="row"><button class="btn primary small" id="qfok">הוספה</button><button class="btn ghost small" id="qfx">ביטול</button></div></div>`;
+   $('#qfok').onclick=()=>{const q=$('#qf1').value.trim();if(!q)return toast('כתבו משפט');addQ({t:'tf',q,o:['True','False'],a:+document.querySelector('input[name=qtf]:checked').value});f.innerHTML='';};}
+  if(t==='mcq'){f.innerHTML=`<div class="note stack"><b>➕ שאלת בחירה</b><input class="inp en" id="qf1" dir="ltr" placeholder="What did Maya buy?" style="text-align:left"><input class="inp en" id="qfa" dir="ltr" placeholder="✓ התשובה הנכונה" style="text-align:left;border-color:var(--good)"><input class="inp en" id="qfb1" dir="ltr" placeholder="✗ תשובה לא נכונה" style="text-align:left"><input class="inp en" id="qfb2" dir="ltr" placeholder="✗ תשובה לא נכונה (לא חובה)" style="text-align:left"><input class="inp en" id="qfb3" dir="ltr" placeholder="✗ תשובה לא נכונה (לא חובה)" style="text-align:left"><div class="row"><button class="btn primary small" id="qfok">הוספה</button><button class="btn ghost small" id="qfx">ביטול</button></div></div>`;
+   $('#qfok').onclick=()=>{const q=$('#qf1').value.trim(),a=$('#qfa').value.trim(),bad=['#qfb1','#qfb2','#qfb3'].map(s=>$(s).value.trim()).filter(Boolean);if(!q||!a||!bad.length)return toast('צריך שאלה, תשובה נכונה ולפחות תשובה לא נכונה אחת');
+    const o=shuffle([a,...bad]);addQ({t:'mcq',q,o,a:o.indexOf(a)});f.innerHTML='';};}
+  if(t==='fill'){const cs=fillCands().filter(x=>!RQ.some(q=>q.q===x.q));if(!story())return toast('כתבו קודם את הסיפור');if(items.length<2)return toast('צריך לפחות 2 מילים ברשימה');if(!cs.length)return toast('לא מצאתי בסיפור משפטים עם מילים מהרשימה');
+   f.innerHTML=`<div class="note stack"><b>➕ השלמה מהסיפור</b><span class="small">בחרו משפט – המילה מהרשימה תוסתר, והתלמידים יבחרו אותה.</span>${cs.slice(0,8).map((x,i)=>`<div class="mist"><div class="en" style="direction:ltr;text-align:left;flex:1">${esc(x.q)}</div><button class="btn ghost small" data-fc="${i}">➕</button></div>`).join('')}<button class="btn ghost small" id="qfx">סגירה</button></div>`;
+   $$('[data-fc]').forEach(b=>b.onclick=()=>{if(addQ(cs[+b.dataset.fc]))b.outerHTML='<span>✅</span>';});}
+  const x=$('#qfx');if(x)x.onclick=()=>{f.innerHTML='';};f.scrollIntoView({behavior:'smooth',block:'nearest'});};
+ $$('[data-qadd]').forEach(b=>b.onclick=()=>form(b.dataset.qadd));
+ $('#tlqs').onclick=async()=>{const txt=story();if(!txt)return toast('כתבו קודם את הסיפור');const b=$('#tlqs');let sug=[];
+  if(aiReady()){b.disabled=true;b.innerHTML='<span class="loader"></span> חושב...';
+   try{const r=await ai(`You are helping an English teacher in Israel. Here is her reading text for Hebrew-speaking school students. Do NOT change the text.
+Text: <<${txt.slice(0,3000)}>>
+Lesson words: ${lessonWords().slice(0,20).join(', ')}
+Write 6 easy comprehension questions in simple English, based ONLY on the text: 2 true/false statements ("t":"tf", options ["True","False"], "a":0 if true, 1 if false), 2 multiple-choice questions ("t":"mcq", 4 short options), and 2 fill-in sentences taken from the text with one lesson word replaced by "_____" ("t":"fill", 4 options that are lesson words, one of them correct).
+Return only JSON: {"questions":[{"t":"tf|mcq|fill","q":"...","o":["..."],"a":0}]} where "a" is the index of the correct option.`);
+    sug=(r&&Array.isArray(r.questions)?r.questions:[]).map(q=>normQ(q)).filter(Boolean);}catch(e){}
+   b.disabled=false;b.textContent='🪄 הצע שאלות';}
+  if(!sug.length){sug=fillCands().slice(0,4);if(sug.length)toast('ה-AI לא זמין – הצעתי שאלות השלמה מהסיפור');}
+  sug=sug.filter(x=>!RQ.some(q=>q.q===x.q));if(!sug.length)return toast('לא הצלחתי להציע שאלות כרגע');
+  const f=$('#tlqf');f.innerHTML=`<div class="note stack"><b>🪄 הצעות – בחרי מה להוסיף</b><span class="small">הסיפור שלך לא משתנה. אפשר להוסיף רק חלק מהשאלות.</span>${sug.map((q,i)=>`<div class="mist"><div style="flex:1"><span class="pill" style="font-size:12px">${Q_HE[q.t]}</span><div class="en" style="direction:ltr;text-align:left">${esc(q.q)}</div><div class="small muted">✓ ${esc(q.t==='tf'?(q.a?'לא נכון (False)':'נכון (True)'):q.o[q.a])}</div></div><button class="btn ghost small" data-sg="${i}">➕</button></div>`).join('')}<div class="row"><button class="btn primary small" id="sgall">➕ הוספת הכול</button><button class="btn ghost small" id="qfx">סגירה</button></div></div>`;
+  $$('[data-sg]').forEach(x=>x.onclick=()=>{if(addQ(sug[+x.dataset.sg]))x.outerHTML='<span>✅</span>';});
+  $('#sgall').onclick=()=>{sug.forEach(q=>addQ(q));f.innerHTML='';};$('#qfx').onclick=()=>{f.innerHTML='';};};
+ $('#tlrg').onclick=async()=>{if(items.length<2)return toast('הוסיפו קודם מילים');if(!aiReady())return toast('צריך חיבור ל-AI');if(story()&&!confirm('להחליף את הסיפור שכבר כתוב?'))return;const b=$('#tlrg');b.disabled=true;b.innerHTML='<span class="loader"></span> כותב...';
+  try{const r=await makeReading(items.slice(0,15).map(w=>w.en),$('#tlrl').value);$('#tlrt').value=r.text||'';heFor=null;$('#tlhe').value='';RQ=(r.questions||[]).map(q=>normQ(q)).filter(Boolean).slice(0,6);drawQ();cov();toast('✅ הסיפור מוכן – אפשר לערוך');}catch(e){aiErr(e);}
+  b.disabled=false;b.textContent='🪄 כתוב סיפור עם המילים';};
+ const translate=async()=>{const txt=story();if(!txt)return'';const r=await ai(`Translate this English text into natural, simple Hebrew for school students. Keep the paragraph breaks.\nText: <<${txt.slice(0,3000)}>>\nReturn only JSON: {"he":"the Hebrew translation"}`);const he=String(r&&r.he||'').trim();if(he){$('#tlhe').value=he;heFor=txt;}return he;};
+ $('#tlheg').onclick=async()=>{if(!story())return toast('כתבו קודם את הסיפור');if(!aiReady())return toast('צריך חיבור ל-AI');const b=$('#tlheg');b.disabled=true;b.innerHTML='<span class="loader"></span>';try{await translate();}catch(e){aiErr(e);}b.disabled=false;b.textContent='🪄 תרגם עכשיו';};
+ $('#tlrcam').onchange=async e=>{const f=e.target.files&&e.target.files[0];if(!f)return;if(!aiReady())return toast('צריך חיבור ל-AI');if(story()&&!confirm('להחליף את הסיפור שכבר כתוב בטקסט מהתמונה?')){e.target.value='';return;}
+  $('#tlcov').innerHTML='<span class="loader"></span> קורא את הטקסט מהתמונה...';
+  try{const r=await aiImage(`This is a photo of a page from an English textbook or worksheet. Copy the main English reading text (story or passage) exactly as written, keeping paragraph breaks. Do not include exercises, page numbers or Hebrew. Return only JSON: {"text":"the text"}`,(await shrink(f)).split(',')[1]);
+   const txt=String(r&&r.text||'').trim().slice(0,3000);if(!txt){toast('לא מצאתי טקסט – נסו צילום ברור יותר');cov();}else{$('#tlrt').value=txt;heFor=null;$('#tlhe').value='';cov();toast('📸 הטקסט הועתק – בדקו שהכול נכון');}}
+  catch(err){cov();if(err&&err.code==='old_server')toast('צריך לעדכן את השרת');else aiErr(err);}e.target.value='';};
  $('#tlcam').onchange=async e=>{const f=e.target.files&&e.target.files[0];if(!f)return;if(!aiReady())return toast('צריך חיבור ל-AI');$('#tlst').innerHTML='<span class="loader"></span> קורא את הדף...';
   try{const got=(await photoToWords(f)).filter(x=>!items.some(y=>y.en.toLowerCase()===x.en.toLowerCase()));if(!got.length){$('#tlst').textContent='לא מצאתי מילים בתמונה – נסו צילום ברור יותר';return;}
    got.forEach(x=>{const fw=allWords().find(y=>y.en.toLowerCase()===x.en.toLowerCase());if(fw){x.he=x.he||fw.he;x.ex=fw.ex;}});
@@ -1057,8 +1108,9 @@ function tlEdit(code,L){
  $('#tlsend').onclick=async()=>{const name=$('#tln').value.trim();if(!name)return toast('תנו שם לרשימה');
   const miss=items.filter(w=>!w.he);if(miss.length)return toast('חסר תרגום ל: '+miss.map(w=>w.en).join(', '));
   const b=$('#tlsend');b.disabled=true;b.innerHTML='<span class="loader"></span>';
-  const text=($('#tlrt').value||'').trim();
-  try{await api('/class/list/save',{code,key:c.key,list:{id:L?L.id:'',name,date:$('#tld').value||'',words:items,text,questions:text?RQ:[]}});toast('✅ הרשימה נשלחה לכיתה!');openClass(code);}
+  const text=story(),tr=$('#tltr').checked;let textHe=($('#tlhe').value||'').trim();
+  if(text&&tr&&(!textHe||(heFor!==null&&heFor!==text))&&aiReady()){b.innerHTML='<span class="loader"></span> מתרגם את הסיפור...';try{textHe=await translate();}catch(e){}}
+  try{await api('/class/list/save',{code,key:c.key,list:{id:L?L.id:'',name,date:$('#tld').value||'',words:items,text,textHe:text?textHe:'',tr,questions:text?RQ:[]}});toast('✅ הרשימה נשלחה לכיתה!');openClass(code);}
   catch(e){if(e&&e.code==='not_found')toast('צריך לעדכן את השרת (worker.js)');else classErr(e);b.disabled=false;b.textContent='📤 שליחה לכיתה';}};
  draw();}
 async function tlStats(code,id){
@@ -1210,7 +1262,7 @@ const LSTAGES=[
  {k:'speak',ic:'🎤',t:'דיבור',d:'אומרים כל מילה בקול',he:'הקשיבו למילה, ואמרו אותה בקול.'},
  {k:'spell',ic:'✍️',t:'איות',d:'שומעים וכותבים באנגלית',he:'שמעו את המילה וכתבו אותה באנגלית.'},
  {k:'game',ic:'🎮',t:'משחק',d:'משחק זוגות עם המילים',he:'מצאו את הזוגות: מילה באנגלית והתרגום שלה.'},
- {k:'read',ic:'📖',t:'קריאה',d:'קטע קצר עם המילים, ושאלות',he:'קראו את הקטע, ואז ענו על השאלות.',opt:true},
+ {k:'read',ic:'📖',t:'סיפור',d:'סיפור קצר עם המילים, ושאלות קלילות',he:'קראו את הסיפור. לחצו על מילה מודגשת כדי לראות מה היא אומרת. אחר כך ענו על השאלות.',opt:true},
  {k:'sentence',ic:'💬',t:'משפט משלי',d:'כותבים משפט עם המילה',he:'כתבו משפט באנגלית עם המילה.'},
  {k:'quiz',ic:'🏁',t:'מבדק',d:'בודקים מה למדנו',he:'מבדק קצר על כל המילים. בהצלחה!'}];
 function lessonStages(t){return LSTAGES.filter(x=>!x.opt||(x.k==='read'&&t.text));}
@@ -1285,19 +1337,55 @@ Return only JSON: {"ok": true or false, "uses_word": true or false, "corrected":
    $('#snx').onclick=step;const st=$('#stry');if(st)st.onclick=()=>{$('#sf').innerHTML='';$('#sx').focus();};
    if(ok)speak(txt);};};
  step();}
+/* 📖 הסיפור של השיעור – התלמיד קורא, לוחץ על מילים, ועונה על שאלות קלילות */
+const reEsc=s=>String(s).replace(/[.*+?^${}()|[\]\\]/g,'\\$&');
+const qType=q=>q&&q.t?q.t:(q&&q.o&&q.o.length===2&&/^true$/i.test(q.o[0])&&/^false$/i.test(q.o[1])?'tf':/_{3,}/.test(q&&q.q||'')?'fill':'mcq');
+const Q_HE={tf:'נכון / לא נכון',mcq:'בחירה',fill:'השלמה'};
+function normQ(q,words){
+ if(!q||!q.q)return null;const t=['tf','mcq','fill'].includes(q.t)?q.t:qType(q);let o=(Array.isArray(q.o)?q.o:[]).map(x=>String(x||'').trim()).filter(Boolean).slice(0,4);let a=Math.max(0,Math.min(3,+q.a||0));
+ let text=String(q.q).trim();
+ if(t==='tf'){o=['True','False'];a=(q.a===1||q.a==='1'||q.a===false||/^false$/i.test(String(q.answer||'')))?1:0;}
+ if(t==='fill'){if(!/_{3,}/.test(text))return null;text=text.replace(/_{3,}/,'_____');}
+ if(o.length<2||a>=o.length)return null;return{t,q:text.slice(0,200),o,a};}
+function storyHTML(t,ws){
+ let html=esc(t.text);if(!ws.length)return html.replace(/\n/g,'<br>');
+ const idx={};ws.forEach((w,i)=>{idx[w.en.toLowerCase()]=i;});
+ const alts=ws.map(w=>w.en).sort((a,b)=>b.length-a.length).map(reEsc).join('|');
+ html=html.replace(new RegExp('\\b('+alts+')(?:s|es|ed|d|ing)?\\b','gi'),(m,base)=>`<span class="hl" data-wi="${idx[base.toLowerCase()]}">${m}</span>`);
+ return html.replace(/\n/g,'<br>');}
 function readingStage(id){
  const t=findT(id);if(!t||!t.text){stageDone(t,'read');return lessonView(id);}
- let html=esc(t.text);examWords(t).map(w=>w.en).sort((a,b)=>b.length-a.length).forEach(w=>{const re=new RegExp('\\b('+w.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')+'(?:s|es|ed|d|ing)?)\\b','gi');html=html.replace(re,m=>`\u0001${m}\u0002`);});
- html=html.replace(/\u0001([^\u0002]+)\u0002/g,(m,a)=>`<span class="hl" data-say="${a}">${a}</span>`).replace(/\n/g,'<br>');
- const qs=(t.qs||[]).filter(q=>q&&q.o&&q.o.length);let qi=0,okc=0;
- view(`<div class="stack"><div class="ses-head"><button class="iconbtn" onclick="tkLesson('${id}')">✕</button><h2 style="margin:0;font-size:19px">📖 קריאה · ${esc(t.name)}</h2></div>
- <div class="card stack"><div class="story en" style="direction:ltr;text-align:left;font-size:19px;line-height:1.8">${html}</div><div class="row"><button class="btn primary" id="rd">🔊 הקראה</button><button class="btn ghost" id="rds">🐢 לאט</button></div><p class="small muted" style="margin:0">לחצו על מילה מודגשת כדי לשמוע אותה.</p></div>
+ const ws=examWords(t);const qs=(t.qs||[]).map(q=>normQ(q)).filter(Boolean);let qi=0,okc=0;
+ view(`<div class="stack"><div class="ses-head"><button class="iconbtn" onclick="tkLesson('${id}')">✕</button><h2 style="margin:0;font-size:19px">📖 סיפור · ${esc(t.name)}</h2></div>
+ <div class="card stack"><div class="story en" style="direction:ltr;text-align:left;font-size:20px;line-height:1.9">${storyHTML(t,ws)}</div>
+ <div id="wpop" class="wpop" hidden></div>
+ <div class="row"><button class="btn primary" id="rd">🔊 הקראה</button><button class="btn ghost" id="rds">🐢 לאט</button>${t.tr!==false?'<button class="btn ghost" id="rtr">🇮🇱 תרגום</button>':''}</div>
+ <div id="rhe" class="note" style="direction:rtl;text-align:right;line-height:1.8" hidden></div>
+ <p class="small muted" style="margin:0">👆 לחצו על מילה מודגשת כדי לראות מה היא אומרת ולשמוע אותה.</p></div>
  <div class="card stack" id="qq"></div></div>`,'reading');
  $('#rd').onclick=()=>speak(t.text.slice(0,1150));$('#rds').onclick=()=>speak(t.text.slice(0,1150),true);
- const showQ=()=>{const box=$('#qq');if(qi>=qs.length){addXP(10+okc*5);stageDone(t,'read');box.innerHTML=`<h3>🎉 סיימת את הקריאה!</h3>${qs.length?`<p style="margin:0">${okc} מתוך ${qs.length} תשובות נכונות</p>`:''}<button class="btn primary" onclick="tkLesson('${id}')">← חזרה לשיעור</button>`;return;}
-  const q=qs[qi];box.innerHTML=`<h3>שאלה ${qi+1}/${qs.length}</h3><div class="en" style="font-size:18px;direction:ltr;text-align:left">${esc(q.q)}</div><div class="opts">${q.o.map(o=>`<button class="opt en" style="direction:ltr;text-align:left">${esc(o)}</button>`).join('')}</div>`;
-  $$('#qq .opt').forEach((b,k)=>b.onclick=()=>{lockOpts(box,+q.a,k);if(k===+q.a){okc++;buzz('good');}else buzz('bad');qi++;later(showQ,1100);});};
- if(qs.length)showQ();else{$('#qq').innerHTML=`<button class="btn primary" id="rdone">✓ קראתי</button>`;$('#rdone').onclick=()=>{stageDone(t,'read');lessonView(id);};}}
+ $$('.story .hl').forEach(s=>s.onclick=()=>{const w=ws[+s.dataset.wi];if(!w)return;$$('.story .hl.on').forEach(x=>x.classList.remove('on'));s.classList.add('on');
+  const p=$('#wpop');p.hidden=false;p.innerHTML=`<span class="en" style="font-size:22px;font-weight:800">${esc(w.en)}</span> <span style="font-size:20px">= ${esc(w.he)}</span> ${spk(w.en,'sm')}${spkSlow(w.en)}`;speak(w.en);});
+ const tr=$('#rtr');if(tr)tr.onclick=async()=>{const box=$('#rhe');if(!box.hidden){box.hidden=true;tr.textContent='🇮🇱 תרגום';return;}
+  if(!t.textHe){if(!aiReady())return toast('התרגום לא זמין כרגע');tr.disabled=true;tr.innerHTML='<span class="loader"></span>';
+   try{const r=await ai(`Translate this English text into natural, simple Hebrew for school students. Keep the paragraph breaks.\nText: <<${t.text.slice(0,3000)}>>\nReturn only JSON: {"he":"the Hebrew translation"}`);t.textHe=String(r&&r.he||'').trim();save();}catch(e){}
+   tr.disabled=false;tr.textContent='🇮🇱 תרגום';if(!t.textHe)return toast('התרגום לא זמין כרגע – נסו שוב');}
+  box.innerHTML='<b>🇮🇱 תרגום:</b><br>'+esc(t.textHe).replace(/\n/g,'<br>');box.hidden=false;tr.textContent='🙈 הסתרת התרגום';};
+ const finish=()=>{const box=$('#qq');addXP(10+okc*5);stageDone(t,'read');const stars=qs.length?(okc===qs.length?'⭐⭐⭐':okc>=qs.length/2?'⭐⭐':'⭐'):'⭐⭐⭐';
+  box.innerHTML=`<div style="text-align:center"><div style="font-size:44px">${stars}</div><h3 style="margin:4px 0">🎉 סיימת את הסיפור!</h3>${qs.length?`<p style="margin:0">${okc} מתוך ${qs.length} תשובות נכונות</p>`:''}</div><button class="btn primary" onclick="tkLesson('${id}')">← חזרה לשיעור</button>`;buzz('good');};
+ const showQ=()=>{const box=$('#qq');if(qi>=qs.length)return finish();const q=qs[qi];const T=q.t;
+  const head=T==='tf'?'נכון או לא נכון?':T==='fill'?'השלימו את המילה החסרה:':'בחרו את התשובה הנכונה:';
+  const qtxt=T==='fill'?esc(q.q).replace('_____','<span class="blank">_____</span>'):esc(q.q);
+  const labels=T==='tf'?['✓ True · נכון','✗ False · לא נכון']:q.o;
+  box.innerHTML=`<div class="row" style="justify-content:space-between"><h3 style="margin:0">❓ שאלה ${qi+1}/${qs.length}</h3><span class="pill">${Q_HE[T]}</span></div><div class="small muted">${head}</div>
+  <div class="en" style="font-size:19px;direction:ltr;text-align:left">${qtxt} ${T!=='fill'?spk(q.q,'sm'):''}</div><div class="opts">${labels.map(o=>`<button class="opt ${T==='tf'?'':'en'}" style="${T==='tf'?'':'direction:ltr;text-align:left'}">${esc(o)}</button>`).join('')}</div><div id="qfb"></div>`;
+  $$('#qq .opt').forEach((b,k)=>b.onclick=()=>{lockOpts(box,+q.a,k);const ok=k===+q.a;if(ok){okc++;buzz('good');}else buzz('bad');
+   const full=T==='fill'?q.q.replace('_____',q.o[q.a]):'';if(full&&ok)speak(full);
+   $('#qfb').innerHTML=ok?'<div class="fb good"><div class="fb-h">נכון! ✓</div></div>':`<div class="fb bad"><div class="fb-h">התשובה הנכונה: <span class="en">${esc(T==='tf'?(q.a?'False · לא נכון':'True · נכון'):q.o[q.a])}</span></div>${full?`<div class="en" style="direction:ltr;text-align:left">${esc(full)}</div>`:''}</div>`;
+   qi++;later(showQ,ok?1200:2600);});};
+ const qq=$('#qq');
+ qq.innerHTML=`<p style="margin:0">${qs.length?`אחרי שקראתם, יש ${qs.length} שאלות קלילות על הסיפור 🙂`:'קראתם? כל הכבוד!'}</p><button class="btn primary" id="rgo" style="font-size:19px">${qs.length?'✓ קראתי – לשאלות':'✓ קראתי'}</button>`;
+ $('#rgo').onclick=()=>{if(qs.length)showQ();else finish();};}
 const _open3=window.open_;
 window.open_=function(id){if(typeof id==='string'&&id.indexOf('lesson-')===0)return lessonView(id.slice(7));return _open3(id);};
 
@@ -1312,8 +1400,8 @@ Return only JSON: {"words":[{"en":"word","he":"Hebrew translation or empty strin
 async function makeReading(words,lvl){
  return await ai(`Write a short, simple, original reading passage in English for Hebrew-speaking school students at CEFR level ${lvl}. Length: ${{A1:'50-70',A2:'70-100',B1:'100-140',B2:'140-180'}[lvl]||'80-110'} words.
 It MUST use these words: ${words.join(', ')}.
-Then write 3 multiple-choice comprehension questions in simple English, 4 short options each.
-Return only JSON: {"text":"the passage","questions":[{"q":"question","o":["a","b","c","d"],"a":0}]} where "a" is the index of the correct option.`);}
+Then write 5 easy comprehension questions in simple English: 2 true/false statements ("t":"tf", options ["True","False"], "a":0 if true, 1 if false), 2 multiple-choice questions ("t":"mcq", 4 short options), and 1 fill-in sentence taken from the passage with one of the words replaced by "_____" ("t":"fill", 4 options from the word list).
+Return only JSON: {"text":"the passage","questions":[{"t":"tf|mcq|fill","q":"question","o":["a","b","c","d"],"a":0}]} where "a" is the index of the correct option.`);}
 function printSheet(L){
  const ws=L.words.filter(w=>w.en&&w.he);const A=shuffle(ws).slice(0,10),letters='אבגדהוזחטיכלמנסעפצקר';const heS=shuffle(A.slice());
  const rx=w=>new RegExp('\\b'+w.en.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')+'\\b','i');
@@ -1468,7 +1556,7 @@ window.openClass=async function(code){await _openClass4(code);if(currentView!=='
 const DEMO_LISTS=[
  {name:'יחידה 4 – טיול לחו״ל',words:[['airport','שדה תעופה','We arrived at the airport early.'],['passport','דרכון','Don’t forget your passport.'],['luggage','מזוודות','Her luggage was very heavy.'],['ticket','כרטיס','I bought a ticket to London.'],['flight','טיסה','The flight takes five hours.'],['hotel','מלון','Our hotel is near the beach.'],['delay','עיכוב','There was a delay because of the weather.'],['map','מפה','We used a map to find the museum.'],['souvenir','מזכרת','I bought a souvenir for my mom.'],['journey','מסע, נסיעה','The journey by train was beautiful.']],
   text:'Last summer, Maya and her family went on a trip to London. They arrived at the airport early, but there was a delay of two hours. Maya held her passport and her ticket and waited. The flight was long, but she was happy.\nIn London, they stayed in a small hotel. Every day, they used a map to find new places. At the end of the journey, Maya bought a souvenir for her grandmother: a small red bus. Her luggage was heavy, but her heart was happy.',
-  questions:[{q:'Where did Maya’s family go?',o:['London','Paris','Rome','New York'],a:0},{q:'Why did they wait at the airport?',o:['They lost the tickets','There was a delay','The hotel was closed','It was raining'],a:1},{q:'What did Maya buy for her grandmother?',o:['A map','A ticket','A small red bus','A passport'],a:2}]},
+  questions:[{t:'tf',q:'Maya’s family went to Paris.',o:['True','False'],a:1},{t:'mcq',q:'Why did they wait at the airport?',o:['They lost the tickets','There was a delay','The hotel was closed','It was raining'],a:1},{t:'fill',q:'Every day, they used a _____ to find new places.',o:['ticket','map','hotel','flight'],a:1},{t:'tf',q:'The flight was long.',o:['True','False'],a:0},{t:'mcq',q:'What did Maya buy for her grandmother?',o:['A map','A ticket','A small red bus','A passport'],a:2}]},
  {name:'יחידה 3 – בבית הספר',words:[['pencil','עיפרון','I write with a pencil.'],['homework','שיעורי בית','I finish my homework after lunch.'],['library','ספרייה','We read books in the library.'],['break','הפסקה','We play football during the break.'],['teacher','מורה','Our teacher is very kind.'],['classroom','כיתה (חדר)','Our classroom is on the second floor.'],['exam','מבחן','I studied hard for the exam.'],['uniform','תלבושת אחידה','We wear a blue uniform.']]}];
 const DEMO_KIDS=['נועה','איתי','מאיה','יונתן','תמר','אורי','שירה','דניאל','רוני','עומר','הילה','אלון'];
 async function makeDemoClass(btn){
@@ -1518,6 +1606,40 @@ window.settingsView=function(){_settings5();if(!SCHOOL)return;
  const head=$('#app h2');
  if(head&&S.cls)head.insertAdjacentHTML('afterend',`<div class="card stack"><h3>🏫 הכיתה שלי</h3><p style="margin:0">${esc(S.cls.me||'')} · כיתה ${esc(S.cls.name||'')}</p><p style="margin:0">הקוד האישי שלך: <b class="en" style="font-size:20px;letter-spacing:2px">${esc(S.cls.pin||'—')}</b> <span class="small muted">(לכניסה ממכשיר אחר)</span></p></div>`);
  if(head&&S.tacct)head.insertAdjacentHTML('afterend',`<div class="card stack"><h3>👩‍🏫 החשבון שלי</h3><p style="margin:0">${esc(S.tacct.name)} · <span class="en">${esc(S.tacct.email)}</span></p><div class="row"><button class="btn ghost" onclick="tkLogout()">יציאה מהחשבון</button></div></div>`);};
+
+/* ===================================================================
+   👀 תצוגת תלמיד – המורה רואה בדיוק מה התלמידים רואים, בלי לשמור כלום
+   =================================================================== */
+(()=>{const s=document.createElement('style');s.textContent=`
+.hl.on{background:var(--pri);color:#fff}
+.wpop{background:var(--acc-soft);border-radius:14px;padding:10px 14px;display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.blank{display:inline-block;min-width:70px;border-bottom:3px solid var(--pri);color:transparent}
+#pvbar{position:fixed;bottom:0;left:0;right:0;z-index:9999;background:#7c3aed;color:#fff;padding:8px 12px calc(8px + env(safe-area-inset-bottom));display:flex;gap:10px;align-items:center;justify-content:center;font-weight:700;font-size:15px;box-shadow:0 -2px 10px rgba(0,0,0,.25)}
+#pvbar .btn{padding:7px 12px;font-size:14px;white-space:nowrap}
+body.pv{padding-bottom:70px}`;document.head.appendChild(s);})();
+let PREV=null;
+const _saveP=window.save;window.save=function(){if(PREV)return;return _saveP.apply(this,arguments);};
+if(typeof saveNow==='function'){const _sn=window.saveNow;window.saveNow=function(){if(PREV)return;return _sn.apply(this,arguments);};}
+const _syncP=window.syncClass;window.syncClass=async function(){if(PREV)return;return _syncP.apply(this,arguments);};
+const _apiP=window.api;window.api=async function(path,body){
+ if(PREV&&/^\/(class\/(progress|join|restore)|room\/)/.test(path)){toast('👀 זו תצוגת תלמיד – כאן לא מתחברים לכיתה באמת');throw{code:'preview'};}
+ return _apiP(path,body);};
+function studentPreview(code){
+ const r=G.lastView,c=(S.teach||[]).find(x=>x.code===code);if(!r||!c)return;
+ save();PREV={snap:JSON.stringify(S),code};const old=S;
+ S=merge({settings:old.settings,placementDone:true,level:old.level,theme:old.theme});
+ S.myName='תלמיד/ה';S.cls={code,id:'__preview',pin:'—',name:r.name||c.name||'',me:'תלמיד/ה',message:r.message||'',ai:r.ai!==false};S.classes=[S.cls];
+ applyLists(r.lists||[],0);
+ document.body.classList.add('pv');let bar=$('#pvbar');if(!bar){document.body.insertAdjacentHTML('beforeend','<div id="pvbar"><span>👀 תצוגת תלמיד<br><span style="font-weight:400;font-size:12px">שום דבר לא נשמר</span></span><button class="btn light small" id="pvx">✕ חזרה למורה</button></div>');}
+ $('#pvx').onclick=exitPreview;renderTop();home();window.scrollTo(0,0);}
+function exitPreview(){if(!PREV)return;const p=PREV;PREV=null;try{gstop();}catch(e){}try{stopSpeak();}catch(e){}LESSON=null;
+ S=merge(JSON.parse(p.snap));const b=$('#pvbar');if(b)b.remove();document.body.classList.remove('pv');renderTop();openClass(p.code);}
+window.tkPreview=studentPreview;
+const _openClass6=window.openClass;
+window.openClass=async function(code){await _openClass6(code);if(currentView!=='class'||!G.lastView||PREV)return;
+ const anchor=$('#tlists')||$('#app .stack > .card');if(!anchor||$('#cprev'))return;
+ anchor.insertAdjacentHTML('beforebegin',`<button class="btn accent" id="cprev" style="font-size:18px">👀 תצוגת תלמיד – לראות מה התלמידים רואים</button>`);
+ $('#cprev').onclick=()=>studentPreview(code);};
 
 /* ===================================================================
    הפעלה

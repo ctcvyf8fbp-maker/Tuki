@@ -37,7 +37,7 @@ export default {
       if (limited(req, 'tts', 90)) return json({ error: 'rate_limited' }, 429);
       return tts(url, env, ctx, cors, json);
     }
-    if (req.method !== 'POST') return json({ ok: true, name: 'Tuki AI', version: 3, classes: !!env.TUKI_KV, voice: !!env.AI });
+    if (req.method !== 'POST') return json({ ok: true, name: 'Tuki AI', version: 4, classes: !!env.TUKI_KV, voice: !!env.AI });
     if (!okOrigin) return json({ error: 'origin' }, 403);
 
     let body;
@@ -247,10 +247,11 @@ async function classApi(path, b, env, json) {
       .map(w => ({ en: clean(w && w.en, 60), he: clean(w && w.he, 80), ex: clean(w && w.ex, 160) })).filter(w => w.en);
     if (!words.length) return json({ error: 'no_words' }, 400);
     const id = clean(L.id, 12) || rnd(6, ID_ABC);
-    const questions = (Array.isArray(L.questions) ? L.questions : []).slice(0, 5).map(q => ({
+    const questions = (Array.isArray(L.questions) ? L.questions : []).slice(0, 6).map(q => ({
+      t: ['tf', 'mcq', 'fill'].includes(q && q.t) ? q.t : 'mcq',
       q: clean(q && q.q, 200), o: (Array.isArray(q && q.o) ? q.o : []).slice(0, 4).map(x => clean(x, 120)), a: Math.min(3, num(q && q.a)),
     })).filter(q => q.q && q.o.length >= 2);
-    const item = { id, name: clean(L.name, 60) || 'רשימת מילים', date: clean(L.date, 10), words, text: clean(L.text, 3000), questions, updated: Date.now() };
+    const item = { id, name: clean(L.name, 60) || 'רשימת מילים', date: clean(L.date, 10), words, text: clean(L.text, 3000), textHe: clean(L.textHe, 4000), tr: L.tr !== false, questions, updated: Date.now() };
     cls.lists = [item, ...(cls.lists || []).filter(x => x.id !== id)].slice(0, 40);
     cls.listsVer = Date.now();
     await KV.put('class:' + code, JSON.stringify(cls));
