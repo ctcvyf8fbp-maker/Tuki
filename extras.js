@@ -1458,6 +1458,63 @@ window.openClass=async function(code){await _openClass4(code);if(currentView!=='
  $$('[data-np]',det).forEach(b=>b.onclick=async()=>{if(!b.dataset.armed){b.dataset.armed=1;b.textContent='בטוח?';return;}
   try{const x=await api('/class/student',{code,key:c.key,id:b.dataset.np,newPin:true});toast('🔑 קוד חדש: '+x.pin);openClass(code);}catch(e){classErr(e);}});};
 
+
+/* ===================================================================
+   🎬 כיתת הדגמה – כדי להראות למנהלים ולמורים איך זה נראה עם נתונים
+   =================================================================== */
+const DEMO_LISTS=[
+ {name:'יחידה 4 – טיול לחו״ל',words:[['airport','שדה תעופה','We arrived at the airport early.'],['passport','דרכון','Don’t forget your passport.'],['luggage','מזוודות','Her luggage was very heavy.'],['ticket','כרטיס','I bought a ticket to London.'],['flight','טיסה','The flight takes five hours.'],['hotel','מלון','Our hotel is near the beach.'],['delay','עיכוב','There was a delay because of the weather.'],['map','מפה','We used a map to find the museum.'],['souvenir','מזכרת','I bought a souvenir for my mom.'],['journey','מסע, נסיעה','The journey by train was beautiful.']],
+  text:'Last summer, Maya and her family went on a trip to London. They arrived at the airport early, but there was a delay of two hours. Maya held her passport and her ticket and waited. The flight was long, but she was happy.\nIn London, they stayed in a small hotel. Every day, they used a map to find new places. At the end of the journey, Maya bought a souvenir for her grandmother: a small red bus. Her luggage was heavy, but her heart was happy.',
+  questions:[{q:'Where did Maya’s family go?',o:['London','Paris','Rome','New York'],a:0},{q:'Why did they wait at the airport?',o:['They lost the tickets','There was a delay','The hotel was closed','It was raining'],a:1},{q:'What did Maya buy for her grandmother?',o:['A map','A ticket','A small red bus','A passport'],a:2}]},
+ {name:'יחידה 3 – בבית הספר',words:[['pencil','עיפרון','I write with a pencil.'],['homework','שיעורי בית','I finish my homework after lunch.'],['library','ספרייה','We read books in the library.'],['break','הפסקה','We play football during the break.'],['teacher','מורה','Our teacher is very kind.'],['classroom','כיתה (חדר)','Our classroom is on the second floor.'],['exam','מבחן','I studied hard for the exam.'],['uniform','תלבושת אחידה','We wear a blue uniform.']]}];
+const DEMO_KIDS=['נועה','איתי','מאיה','יונתן','תמר','אורי','שירה','דניאל','רוני','עומר','הילה','אלון'];
+async function makeDemoClass(btn){
+ if(btn){btn.disabled=true;btn.innerHTML='<span class="loader"></span> בונה כיתת הדגמה...';}
+ try{
+  const c=await api('/class/create',{name:'כיתת הדגמה – ז׳3'});S.teach=S.teach||[];if(!S.teach.some(x=>x.code===c.code))S.teach.push({code:c.code,key:c.key,name:c.name,demo:1});save();
+  const ids=[];const in2=new Date(Date.now()+5*864e5).toISOString().slice(0,10);
+  for(const [i,L] of DEMO_LISTS.entries()){const r=await api('/class/list/save',{code:c.code,key:c.key,list:{name:L.name,date:i===0?in2:'',words:L.words.map(([en,he,ex])=>({en,he,ex})),text:L.text||'',questions:L.questions||[]}});ids.push(r.id);}
+  await api('/class/message',{code:c.code,key:c.key,message:'עד יום חמישי: לסיים את השיעור "טיול לחו״ל" כולל המבדק 💪'});
+  const hardPool=['luggage','souvenir','journey','delay','passport'];
+  for(const [k,nm] of DEMO_KIDS.entries()){
+   const j=await api('/class/join',{code:c.code,name:nm+' (דוגמה)'});const lvl=k%5===0?3:k%3===0?1:2;
+   const st1=[8,8,8,7,6,8,5,3,8,2,7,0][k],q1=st1>=8?[95,88,100,0,0,92,0,0,76,0,0,0][k]||84:null,st2=[7,7,6,7,4,7,7,2,5,1,7,3][k];
+   const r1=Math.min(100,Math.round(st1/8*90+(k%4)*3)),r2=Math.min(100,Math.round(st2/7*85+(k%3)*4));
+   const data={lvl:['A1','A2','B1','B2'][lvl],xp:300+k*137%900,streak:[6,4,9,2,1,5,3,0,7,0,4,1][k],words:8+st1+st2,lessons:0,acc:[92,85,95,71,64,88,79,58,83,55,90,60][k],week:[340,260,410,150,90,280,180,40,300,20,240,60][k],
+    lr:{[ids[0]]:r1,[ids[1]]:r2},ls:{[ids[0]]:st1,[ids[1]]:st2},lq:Object.assign({},q1!=null?{[ids[0]]:q1}:{} ,st2>=7?{[ids[1]]:[90,85,0,96,0,100,80,0,0,0,88,0][k]||82}:{}),
+    hard:{[ids[0]]:hardPool.filter((_,h)=>(k+h)%3!==0).slice(0,3),[ids[1]]:['homework','uniform','library'].filter((_,h)=>(k+h)%2===0)}};
+   await api('/class/progress',{code:c.code,id:j.id,data});
+   if(btn)btn.innerHTML=`<span class="loader"></span> מוסיף תלמידים ${k+1}/${DEMO_KIDS.length}...`;}
+  toast('🎬 כיתת ההדגמה מוכנה!');openClass(c.code);}
+ catch(e){classErr(e);if(btn){btn.disabled=false;btn.textContent='🎬 יצירת כיתת הדגמה';}}}
+window.tkDemo=b=>makeDemoClass(b);
+const _teacherHome3=window.teacherHome;
+window.teacherHome=function(){_teacherHome3();if(currentView!=='teacher')return;const has=(S.teach||[]).some(c=>/הדגמה/.test(c.name));
+ const box=$('#app .stack');if(box&&!has)box.insertAdjacentHTML('beforeend',`<div class="card stack"><h3>🎬 רוצה לראות איך זה נראה?</h3><p class="small muted" style="margin:0">יוצרים כיתה לדוגמה עם 2 רשימות מילים ו-12 תלמידים עם התקדמות – מעולה להצגה למנהל או לצוות.</p><button class="btn ghost" onclick="tkDemo(this)">🎬 יצירת כיתת הדגמה</button></div>`);};
+/* הסרת כיתה מהחשבון (למשל כיתת ההדגמה) */
+const _openClass5=window.openClass;
+window.openClass=async function(code){await _openClass5(code);if(currentView!=='class')return;const cp=$('#cexp')||$('#cpar');if(!cp)return;
+ cp.insertAdjacentHTML('afterend',`<button class="btn ghost" id="crm" style="color:var(--bad)">🗑 הסרת הכיתה מהרשימה שלי</button>`);
+ $('#crm').onclick=async()=>{const b=$('#crm');if(!b.dataset.armed){b.dataset.armed=1;b.textContent='בטוח? לחצו שוב (התלמידים לא יימחקו)';return;}
+  try{if(S.tacct&&S.tacct.token)await _api('/teacher/removeclass',{token:S.tacct.token,code});}catch(e){}
+  S.teach=(S.teach||[]).filter(c=>c.code!==code);save();toast('הכיתה הוסרה מהרשימה');teacherHome();};};
+
+/* ===================================================================
+   🧹 הגדרות נקיות במצב בית ספר
+   =================================================================== */
+const _settings5=window.settingsView;
+window.settingsView=function(){_settings5();if(!SCHOOL)return;
+ const kill=el=>{if(el)el.remove();};
+ kill(($('#sg')||{}).closest&&$('#sg').closest('label'));
+ $$('#app .lvlpick').forEach(p=>{if(p.querySelector('[data-l]'))kill(p.closest('.set'));});
+ $$('#app .row').forEach(r=>{if(r.querySelector('#rst'))kill(r);});
+ $$('#app .note').forEach(n=>{if(/ה-AI מחובר/.test(n.textContent))kill(n);});
+ $$('#app .card').forEach(c=>{const h=c.querySelector('h3');if(h&&/ההתקדמות שלי|אני מורה/.test(h.textContent))kill(c);});
+ $$('#app .row').forEach(r=>{if(/דוח שבועי/.test(r.textContent)&&!S.tmode)kill(r);});
+ const head=$('#app h2');
+ if(head&&S.cls)head.insertAdjacentHTML('afterend',`<div class="card stack"><h3>🏫 הכיתה שלי</h3><p style="margin:0">${esc(S.cls.me||'')} · כיתה ${esc(S.cls.name||'')}</p><p style="margin:0">הקוד האישי שלך: <b class="en" style="font-size:20px;letter-spacing:2px">${esc(S.cls.pin||'—')}</b> <span class="small muted">(לכניסה ממכשיר אחר)</span></p></div>`);
+ if(head&&S.tacct)head.insertAdjacentHTML('afterend',`<div class="card stack"><h3>👩‍🏫 החשבון שלי</h3><p style="margin:0">${esc(S.tacct.name)} · <span class="en">${esc(S.tacct.email)}</span></p><div class="row"><button class="btn ghost" onclick="tkLogout()">יציאה מהחשבון</button></div></div>`);};
+
 /* ===================================================================
    הפעלה
    =================================================================== */
