@@ -118,9 +118,9 @@ function teacherOk(env, b) {
   return !!want && got === want;
 }
 // רשימות שעוד רלוונטיות לתלמידים (בלי תאריך, או שהתאריך לא עבר לפני יותר משבוע)
+// כל הרשימות של הכיתה נשמרות ("בנק מילים" שגדל לאורך השנה) – עד 40 רשימות
 function activeLists(cls) {
-  const weekAgo = new Date(Date.now() - 7 * 864e5).toISOString().slice(0, 10);
-  return (cls.lists || []).filter(l => !l.date || l.date >= weekAgo).slice(0, 10);
+  return (cls.lists || []).slice(0, 40);
 }
 const clean = (s, n) => String(s ?? '').slice(0, n).trim();
 const num = v => Math.max(0, Math.min(1e9, Math.round(+v || 0)));
@@ -148,8 +148,29 @@ async function classApi(path, b, env, json) {
     const name = clean(b.name, 40);
     if (!name) return json({ error: 'no_name' }, 400);
     const id = rnd(12, ID_ABC);
-    await KV.put(`s:${code}:${id}`, '1', { metadata: { name, joined: Date.now(), last: Date.now() } });
-    return json({ id, className: cls.name, message: cls.message || '' });
+    const pin = rnd(5, CODE_ABC); // קוד אישי – לכניסה ממכשיר אחר
+    await KV.put(`s:${code}:${id}`, '1', { metadata: { name, joined: Date.now(), last: Date.now(), pin } });
+    return json({ id, pin, className: cls.name, message: cls.message || '' });
+  }
+
+  // כניסה ממכשיר אחר: קוד כיתה + קוד אישי ← מחזיר את ההתקדמות השמורה
+  if (path === '/class/restore') {
+    const pin = clean(b.pin, 10).toUpperCase();
+    if (!pin) return json({ error: 'no_pin' }, 400);
+    let cursor;
+    do {
+      const list = await KV.list({ prefix: `s:${code}:`, cursor });
+      for (const k of list.keys) {
+        const m = k.metadata || {};
+        if (m.pin && m.pin === pin) {
+          let state = null;
+          try { state = JSON.parse((await KV.get(k.name)) || '{}').state || null; } catch {}
+          return json({ id: k.name.split(':')[2], name: m.name || '', pin, className: cls.name, message: cls.message || '', state });
+        }
+      }
+      cursor = list.list_complete ? null : list.cursor;
+    } while (cursor);
+    return json({ error: 'bad_pin' }, 404);
   }
 
   if (path === '/class/progress') {
@@ -163,12 +184,17 @@ async function classApi(path, b, env, json) {
     const lr = {}, hard = {};
     Object.entries(d.lr || {}).slice(0, 8).forEach(([id, v]) => { lr[clean(id, 12)] = Math.min(100, num(v)); });
     Object.entries(d.hard || {}).slice(0, 8).forEach(([id, ws]) => { hard[clean(id, 12)] = (Array.isArray(ws) ? ws : []).slice(0, 10).map(w => clean(w, 60)); });
-    await KV.put(k, JSON.stringify({ hard }), { metadata: {
+    // ההתקדמות המלאה של התלמיד (כדי שיוכל להמשיך מכל מכשיר)
+    const state = typeof b.state === 'string' && b.state.length < 1_500_000 ? b.state : null;
+    let oldState = null;
+    if (!state) { try { oldState = JSON.parse(cur.value || '{}').state || null; } catch {} }
+    const pin = m.pin || rnd(5, CODE_ABC);
+    await KV.put(k, JSON.stringify({ hard, state: state || oldState }), { metadata: { pin,
       name: m.name || '?', joined: m.joined || Date.now(), last: Date.now(),
       lvl: clean(d.lvl, 3), xp: num(d.xp), streak: num(d.streak), words: num(d.words),
       lessons: num(d.lessons), acc: Math.min(100, num(d.acc)), week: num(d.week), lr,
     } });
-    const out = { ok: true, className: cls.name, message: cls.message || '', lv: cls.listsVer || 0 };
+    const out = { ok: true, pin, className: cls.name, message: cls.message || '', lv: cls.listsVer || 0 };
     if ((cls.listsVer || 0) !== (+b.lv || 0)) out.lists = activeLists(cls);
     return json(out);
   }
@@ -210,7 +236,7 @@ async function classApi(path, b, env, json) {
     if (!words.length) return json({ error: 'no_words' }, 400);
     const id = clean(L.id, 12) || rnd(6, ID_ABC);
     const item = { id, name: clean(L.name, 60) || 'רשימת מילים', date: clean(L.date, 10), words, updated: Date.now() };
-    cls.lists = [item, ...(cls.lists || []).filter(x => x.id !== id)].slice(0, 15);
+    cls.lists = [item, ...(cls.lists || []).filter(x => x.id !== id)].slice(0, 40);
     cls.listsVer = Date.now();
     await KV.put('class:' + code, JSON.stringify(cls));
     return json({ ok: true, id });

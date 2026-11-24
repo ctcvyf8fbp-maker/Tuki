@@ -138,7 +138,7 @@ const _record=record;
 window.record=function(skill,ok,lvl,info){const before=S.level;const x=_record(skill,ok,lvl,info);buzz(ok?'good':'bad');
  if(lvlIdx(S.level)>lvlIdx(before)){S.certNew=before;save();}return x;};
 const _renderTop=renderTop;
-window.renderTop=function(){_renderTop();const set=$('#topin .iconbtn');if(set&&!$('#coinchip'))set.insertAdjacentHTML('beforebegin',`<span class="chip" id="coinchip" title="המטבעות שלי" onclick="open_('pet')" style="cursor:pointer">🪙 ${S.coins||0}</span>`);};
+window.renderTop=function(){_renderTop();if(typeof SCHOOL!=='undefined'&&SCHOOL)$$('#topin .chip').forEach(c=>{if(/🎓/.test(c.textContent))c.remove();});const set=$('#topin .iconbtn');if(set&&!$('#coinchip'))set.insertAdjacentHTML('beforebegin',`<span class="chip" id="coinchip" title="המטבעות שלי" onclick="open_('pet')" style="cursor:pointer">🪙 ${S.coins||0}</span>`);};
 
 /* ---------------- מצב כהה ---------------- */
 const mq=window.matchMedia?matchMedia('(prefers-color-scheme: dark)'):null;
@@ -368,8 +368,9 @@ const tmode=()=>!!S.tmode;
 const _api=api;
 window.api=async function(path,body){
  if(path==='/class/create'||path==='/room/create')body=Object.assign({},body,{tcode:S.tcode||''});
- if(path==='/class/progress'&&S.cls)body=Object.assign({},body,{lv:S.cls.lv||0});
+ if(path==='/class/progress'&&S.cls){body=Object.assign({},body,{lv:S.cls.lv||0});const st=typeof stateBlob==='function'?stateBlob():null;if(st)body.state=st;}
  const r=await _api(path,body);
+ if(path==='/class/progress'&&r&&r.pin&&S.cls&&S.cls.pin!==r.pin){S.cls.pin=r.pin;save();}
  if(path==='/class/progress'&&r&&Array.isArray(r.lists))applyLists(r.lists,r.lv);
  if(path==='/class/view')G.lastView=r;
  return r;};
@@ -960,7 +961,7 @@ function applyLists(lists,lv){
  S.tests=S.tests.filter(t=>!t.tid||ids.has(t.id));
  lists.forEach(l=>{let t=S.tests.find(x=>x.id==='T'+l.id);
   if(!t){t={id:'T'+l.id,tid:l.id,name:'',date:'',words:[],created:now()};S.tests.unshift(t);fresh++;}
-  if(t.tver!==l.updated){t.name='👩‍🏫 '+l.name;t.date=l.date||'';t.words=[];addWordsToTest(t,(l.words||[]).map(w=>({en:w.en,he:w.he,ex:w.ex})));t.tver=l.updated;}});
+  if(t.tver!==l.updated){t.name=l.name;t.date=l.date||'';t.words=[];addWordsToTest(t,(l.words||[]).map(w=>({en:w.en,he:w.he,ex:w.ex})));t.tver=l.updated;}});
  save();if(fresh)toast('📝 קיבלת רשימת מילים חדשה מהמורה!');if(currentView==='home')home();}
 const _classStats=classStats;
 window.classStats=function(){const d=_classStats();const lr={},hard={};
@@ -1021,13 +1022,89 @@ async function tlStats(code,id){
  <p class="small muted">הנתונים מתעדכנים כשהתלמידים פותחים את Tuki (עד כמה דקות עיכוב).</p></div></div>`,'tlstats');
  $('#tsb').onclick=()=>openClass(code);}
 
+
+/* ===================================================================
+   🏫 מצב בית ספר – כניסה עם קוד, ורק התוכן של המורה
+   (כל שאר התרגולים מוסתרים מהמסכים אבל לא נמחקו מהקוד)
+   =================================================================== */
+const SCHOOL=true;
+const tTests=()=>(S.tests||[]).filter(t=>t.tid).sort((a,b)=>(b.tver||0)-(a.tver||0));
+const tWords=()=>{const seen=new Set(),out=[];tTests().forEach(t=>examWords(t).forEach(w=>{if(!seen.has(w.en)){seen.add(w.en);out.push(w);}}));return out;};
+function stateBlob(){try{const c=JSON.parse(JSON.stringify(S));c.settings=Object.assign({},c.settings,{aiKey:''});delete c.teach;delete c.tcode;delete c.tmode;delete c.cls;const j=JSON.stringify(c);return j.length<1400000?j:null;}catch(e){return null;}}
+function gateView(prefill){
+ renderTop();
+ view(`<div class="stack" style="max-width:520px;margin:0 auto">
+ <div style="text-align:center"><img src="${LOGO}" alt="Tuki" style="width:96px;height:96px;border-radius:24px"><h1 style="margin:10px 0 0">ברוכים הבאים ל-Tuki</h1><p class="muted" style="margin:4px 0 0">מתרגלים אנגלית עם המילים מהשיעור 🦜</p></div>
+ <div class="card stack"><h3>🧑‍🎓 אני תלמיד/ה</h3>
+  <input class="inp en" id="gcode" placeholder="קוד כיתה מהמורה" value="${esc(prefill||'')}" autocomplete="off" style="text-transform:uppercase;font-size:20px;letter-spacing:2px">
+  <input class="inp" id="gname" placeholder="השם שלך (שם פרטי)" autocomplete="off">
+  <button class="btn primary" id="gjoin" style="font-size:19px">כניסה לכיתה</button>
+  <details class="small"><summary class="muted">כבר נכנסתי ממכשיר אחר</summary><div class="stack" style="margin-top:10px"><p class="small" style="margin:0">מקלידים את קוד הכיתה (למעלה) ואת הקוד האישי שלך. המורה יכולה לראות אותו בלוח המורה.</p><div class="row"><input class="inp en" id="gpin" placeholder="קוד אישי" style="flex:1;text-transform:uppercase"><button class="btn ghost" id="grest">המשך מאיפה שעצרתי</button></div></div></details></div>
+ <div class="card stack"><h3>👩‍🏫 אני מורה</h3><div class="row"><input class="inp en" id="gt" placeholder="קוד מורה" autocomplete="off" style="flex:1;min-width:150px;text-transform:uppercase"><button class="btn ghost" id="gtgo">כניסה</button></div><span class="small" id="gtres"></span></div></div>`,'gate');
+ const busy=(b,on,txt)=>{b.disabled=on;b.innerHTML=on?'<span class="loader"></span>':txt;};
+ $('#gjoin').onclick=async()=>{const code=$('#gcode').value.trim().toUpperCase(),name=$('#gname').value.trim();if(!code)return toast('צריך קוד כיתה');if(!name)return toast('כתבו את השם שלכם');
+  const b=$('#gjoin');busy(b,true);
+  try{const r=await api('/class/join',{code,name});S.cls={code,id:r.id,pin:r.pin||'',name:r.className,me:name,message:r.message||''};S.myName=name;S.placementDone=true;save();
+   await syncClass(true);toast('🎉 ברוכים הבאים לכיתה '+r.className+'!');home();}
+  catch(e){classErr(e);busy(b,false,'כניסה לכיתה');}};
+ $('#grest').onclick=async()=>{const code=$('#gcode').value.trim().toUpperCase(),pin=$('#gpin').value.trim().toUpperCase();if(!code||!pin)return toast('צריך קוד כיתה וקוד אישי');
+  const b=$('#grest');busy(b,true);
+  try{const r=await api('/class/restore',{code,pin});
+   if(r.state){try{const keep={teach:S.teach,tcode:S.tcode,tmode:S.tmode};S=merge(JSON.parse(r.state));Object.assign(S,keep);}catch(e){}}
+   S.cls={code,id:r.id,pin,name:r.className,me:r.name,message:r.message||''};S.myName=r.name;S.placementDone=true;save();
+   await syncClass(true);toast('👋 שלום '+r.name+'! ההתקדמות שלך חזרה');home();}
+  catch(e){toast(e&&e.code==='bad_pin'?'הקוד האישי לא נכון':e&&(e.code==='not_found'||e.code==='bad_prompt')?'צריך לעדכן את השרת':'לא הצלחתי – בדקו את הקודים');busy(b,false,'המשך מאיפה שעצרתי');}};
+ $('#gtgo').onclick=async()=>{const c=$('#gt').value.trim().toUpperCase();if(!c)return;const b=$('#gtgo');busy(b,true);
+  try{await _api('/teacher/check',{tcode:c});S.tcode=c;S.tmode=true;S.placementDone=true;save();toast('✅ ברוכה הבאה!');home();}
+  catch(e){$('#gtres').innerHTML='<span style="color:var(--bad)">❌ '+(e&&e.code==='bad_tcode'?'הקוד לא נכון':'אין חיבור לשרת')+'</span>';busy(b,false,'כניסה');}};}
+function studentHome(){
+ const ts=tTests(),t0=now();const all=tWords();
+ const due=all.filter(w=>S.words[w.en]&&S.words[w.en].due<=t0);
+ view(`<div class="stack">
+ <div class="card hero"><div class="hero-row"><img src="${LOGO}" alt="" style="width:64px;height:64px;border-radius:18px"><div style="flex:1"><h2 style="margin:0;color:#fff">שלום ${esc(S.cls.me||'')}! 👋</h2><div class="muted">כיתה ${esc(S.cls.name||'')} · ${all.length} מילים בבנק המילים</div></div></div></div>
+ ${S.cls.message?`<div class="note">📣 <b>מהמורה:</b> ${esc(S.cls.message)}</div>`:''}
+ ${all.length?`<button class="mod" id="drev" style="min-height:auto;width:100%"><span class="ic">🔁</span><span class="t">חזרה יומית</span><span class="d">${due.length?`${due.length} מילים מחכות לחזרה`:'אין מילים לחזרה היום ✅ – אפשר לחזור על הכול'}</span></button>`:''}
+ <h3 style="margin:6px 0 0">📚 השיעורים שלי</h3>
+ ${ts.length?ts.map((t,k)=>{const r=examReady(t),d=daysLeft(t.date);return`<button class="mod" style="min-height:88px;width:100%" data-ex="${t.id}"><div class="row" style="width:100%"><span class="t">${esc(t.name.replace(/^👩‍🏫\s*/,''))}${k===0?' <span class="pill" style="font-size:12px">חדש</span>':''}</span><span class="pill" style="margin-inline-start:auto">${t.words.length} מילים</span></div>
+  <div class="row" style="width:100%"><div class="sbar"><i style="width:${r}%"></i></div><b>${r}%</b></div><span class="d">מוכנות${t.date?' · '+daysTxt(d):''}</span></button>`;}).join('')
+  :`<div class="card stack" style="text-align:center"><div style="font-size:54px">🦜</div><b>עוד אין מילים מהמורה</b><p class="small muted" style="margin:0">ברגע שהמורה תשלח רשימת מילים, היא תופיע כאן.</p></div>`}
+ <div class="row" style="justify-content:center"><button class="btn ghost small" id="schk">🔄 בדיקת עדכונים מהמורה</button></div>
+ <p class="small muted" style="text-align:center;margin:0">הקוד האישי שלך: <b class="en">${esc(S.cls.pin||'—')}</b> · איתו נכנסים ממכשיר אחר</p></div>`,'home');
+ $$('[data-ex]').forEach(b=>b.onclick=()=>examView(b.dataset.ex));
+ const dr=$('#drev');if(dr)dr.onclick=()=>{const pick=(due.length?due:shuffle(all)).slice(0,10);runSession({title:'🔁 חזרה יומית',kind:'school-review',skill:'vocab',items:shuffle(pick).map((w,i)=>()=>makeVocabQ(w,['mcq','listen','spell'][i%3]))});};
+ $('#schk').onclick=async()=>{const b=$('#schk');b.disabled=true;b.innerHTML='<span class="loader"></span>';await syncClass(true);toast('עודכן ✓');home();};}
+ROUTES['school-review']=()=>home();
+const _homeAll=window.home;
+window.home=function(){if(!SCHOOL)return _homeAll();if(tmode())return teacherHome();if(!S.cls)return gateView();return studentHome();};
+const _examHome=examHome;
+window.examHome=function(){if(SCHOOL&&!tmode())return home();return _examHome();};
+const _examView=examView;
+window.examView=function(id){_examView(id);const t=(S.tests||[]).find(x=>x.id===id);if(SCHOOL&&t&&t.tid){const e=$('#exed');if(e)e.remove();const h=$('#app .ses-head h2');if(h)h.textContent='📚 '+t.name.replace(/^👩‍🏫\s*/,'');}};
+/* תלמיד שיצא מהכיתה או שהכיתה נמחקה – חוזר למסך הכניסה */
+const _settings2=window.settingsView;
+window.settingsView=function(){_settings2();if(!SCHOOL)return;
+ const ac=$('#app .card');
+ $$('#app .card').forEach(c=>{const h=c.querySelector('h3');if(h&&/הצטרפות לכיתה/.test(h.textContent))c.remove();});
+ if(S.cls){const l=$('#clleave');if(l)l.addEventListener('click',()=>later(()=>{const y=$('#clleave2');if(y)y.addEventListener('click',()=>later(home,50));},50));}};
+/* לוח המורה: קודים אישיים + קישור הזמנה לאתר */
+const _openClass2=window.openClass;
+window.openClass=async function(code){await _openClass2(code);if(currentView!=='class'||!G.lastView)return;
+ const r=G.lastView;const sh=$('#cshare');
+ if(sh)sh.onclick=async()=>{const txt=`הצטרפו לכיתה "${r.name}" ב-Tuki 🦜\n1. היכנסו ל: ${SITE}#join=${code}\n2. כתבו את השם שלכם ולחצו "כניסה לכיתה"\n(קוד הכיתה: ${code})`;
+  try{await navigator.clipboard.writeText(txt);toast('✅ ההזמנה הועתקה – הדביקו בוואטסאפ של הכיתה');}catch(e){if(navigator.share)navigator.share({text:txt}).catch(()=>{});else toast('קוד הכיתה: '+code);}};
+ const st=(r.students||[]);if(!st.length)return;const tl=$('#tlists');
+ (tl||$('#app .stack > .card')).insertAdjacentHTML('afterend',`<details class="card"><summary><b>🔑 קודים אישיים של התלמידים</b> <span class="small muted">– לכניסה ממכשיר אחר</span></summary><div style="margin-top:8px">${st.map(x=>`<div class="lb"><span style="flex:1">${esc(x.name||'?')}</span><b class="en" style="letter-spacing:2px">${esc(x.pin||'יופיע אחרי הכניסה הבאה')}</b></div>`).join('')}</div></details>`);};
+/* שמירת התקדמות גם ביציאה מהאפליקציה */
+document.addEventListener('visibilitychange',()=>{if(document.hidden&&S.cls)syncClass(true);});
+
 /* ===================================================================
    הפעלה
    =================================================================== */
 window.addEventListener('offline',()=>toast('📴 אין אינטרנט – אפשר להמשיך לתרגל מילים ולשחק 🦜'));
 window.addEventListener('online',()=>toast('🌐 החיבור חזר'));
 if(!isApp&&'serviceWorker' in navigator&&location.protocol==='https:'){window.addEventListener('load',()=>{navigator.serviceWorker.register('./sw.js').catch(()=>{});});}
-function boot(){applyTheme();renderTop();if(currentView==='home'||currentView==='')home();
+function boot(){applyTheme();renderTop();if(SCHOOL||currentView==='home'||currentView==='')home();
+ const jm=String(location.hash).match(/join=([A-Z0-9]{4,8})/i);if(jm&&!S.cls&&!tmode()){history.replaceState(null,'',location.pathname);gateView(jm[1].toUpperCase());return;}
  const m=String(location.hash).match(/room=([A-Z0-9]{4,8})/i);if(m&&S.placementDone){history.replaceState(null,'',location.pathname);roomHome(m[1].toUpperCase());}
  if(isApp&&S.settings.remind&&S.settings.remind.on)scheduleReminder();}
 boot();
