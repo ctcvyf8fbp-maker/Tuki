@@ -34,9 +34,10 @@ export default {
     const url = new URL(req.url);
     if (req.method === 'GET' && url.pathname === '/tts') {
       if (!okOrigin) return json({ error: 'origin' }, 403);
+      if (limited(req, 'tts', 90)) return json({ error: 'rate_limited' }, 429);
       return tts(url, env, ctx, cors, json);
     }
-    if (req.method !== 'POST') return json({ ok: true, name: 'Tuki AI', version: 2, classes: !!env.TUKI_KV, voice: !!env.AI });
+    if (req.method !== 'POST') return json({ ok: true, name: 'Tuki AI', version: 3, classes: !!env.TUKI_KV, voice: !!env.AI });
     if (!okOrigin) return json({ error: 'origin' }, 403);
 
     let body;
@@ -44,10 +45,15 @@ export default {
 
     const path = url.pathname;
     if (path === '/teacher/check') return json(teacherOk(env, body) ? { ok: true } : { error: 'bad_tcode' }, teacherOk(env, body) ? 200 : 403);
+    if (path.startsWith('/teacher/') || path.startsWith('/school/')) {
+      if (limited(req, 'acct', 30)) return json({ error: 'rate_limited' }, 429);
+      return acctApi(path, body || {}, env, json);
+    }
     if (path.startsWith('/class')) return classApi(path, body || {}, env, json);
     if (path.startsWith('/room')) return roomApi(path, body || {}, env, json);
 
     // ---- AI ----
+    if (limited(req, 'ai', 25)) return json({ error: 'rate_limited' }, 429);
     const prompt = body && body.prompt;
     if (typeof prompt !== 'string' || !prompt || prompt.length > 12000) return json({ error: 'bad_prompt' }, 400);
     const model = env.MODEL || 'gemini-flash-latest';
@@ -130,12 +136,14 @@ async function classApi(path, b, env, json) {
   if (!KV) return json({ error: 'no_kv' }, 500);
 
   if (path === '/class/create') {
-    if (!teacherOk(env, b)) return json({ error: 'bad_tcode' }, 403);
+    const acct = b.token ? await acctFromToken(KV, b.token) : null;
+    if (!acct && !teacherOk(env, b)) return json({ error: 'bad_tcode' }, 403);
     const name = clean(b.name, 60) || 'My class';
     let code = '';
     for (let i = 0; i < 6; i++) { code = rnd(6, CODE_ABC); if (!(await KV.get('class:' + code))) break; }
     const key = rnd(24, ID_ABC);
-    await KV.put('class:' + code, JSON.stringify({ name, key, message: '', created: Date.now() }));
+    await KV.put('class:' + code, JSON.stringify({ name, key, message: '', created: Date.now(), owner: acct ? acct.email : '' }));
+    if (acct) { acct.classes = [...(acct.classes || []).filter(c => c.code !== code), { code, key, name }]; await saveAcct(KV, acct); }
     return json({ code, key, name });
   }
 
@@ -248,6 +256,17 @@ async function classApi(path, b, env, json) {
     await KV.put('class:' + code, JSON.stringify(cls));
     return json({ ok: true, id });
   }
+  // עריכת תלמיד: שינוי שם / קוד אישי חדש
+  if (path === '/class/student') {
+    const id = clean(b.id, 20), k = `s:${code}:${id}`;
+    const cur = await KV.getWithMetadata(k);
+    if (!cur || cur.value === null) return json({ error: 'no_student' }, 404);
+    const m = cur.metadata || {};
+    if (b.name) m.name = clean(b.name, 40);
+    if (b.newPin) m.pin = rnd(5, CODE_ABC);
+    await KV.put(k, cur.value, { metadata: m });
+    return json({ ok: true, name: m.name, pin: m.pin });
+  }
   if (path === '/class/settings') {
     if (typeof b.ai === 'boolean') cls.ai = b.ai;
     cls.listsVer = Date.now();
@@ -306,7 +325,7 @@ async function roomApi(path, b, env, json) {
 
   if (path === '/room/create') {
     const kind = b.kind === 'quiz' ? 'quiz' : 'duel';
-    if (kind === 'quiz' && !teacherOk(env, b)) return json({ error: 'bad_tcode' }, 403);
+    if (kind === 'quiz' && !teacherOk(env, b) && !(b.token && await acctFromToken(KV, b.token))) return json({ error: 'bad_tcode' }, 403);
     const lvl = LV.includes(b.lvl) ? b.lvl : 'A2';
     const n = [10, 15, 20].includes(+b.n) ? +b.n : 10;
     let code = '';
@@ -350,6 +369,141 @@ async function roomApi(path, b, env, json) {
       cursor = list.list_complete ? null : list.cursor;
     } while (cursor);
     return json({ room: { kind: room.kind, lvl: room.lvl, n: room.n, name: room.name }, players });
+  }
+  return json({ error: 'not_found' }, 404);
+}
+
+// ---------------- הגבלת קצב (הגנה מפני שימוש מוגזם) ----------------
+// נספר לכל כתובת IP בכל דקה. זו הגנה בסיסית; אפשר להוסיף גם כלל Rate limiting ב-Cloudflare.
+const RL = new Map();
+function limited(req, kind, perMin) {
+  const ip = req.headers.get('CF-Connecting-IP') || 'x';
+  const k = kind + ':' + ip + ':' + Math.floor(Date.now() / 60000);
+  const n = (RL.get(k) || 0) + 1;
+  RL.set(k, n);
+  if (RL.size > 5000) for (const key of RL.keys()) { RL.delete(key); if (RL.size < 2500) break; }
+  return n > perMin;
+}
+
+// ---------------- חשבונות מורה ובית ספר ----------------
+const PW_ITER = 50000;
+const b64e = u8 => btoa(String.fromCharCode(...u8));
+const b64d = s => Uint8Array.from(atob(s), c => c.charCodeAt(0));
+async function hashPw(pw, saltB64, iter = PW_ITER) {
+  const salt = saltB64 ? b64d(saltB64) : crypto.getRandomValues(new Uint8Array(16));
+  const key = await crypto.subtle.importKey('raw', new TextEncoder().encode(pw), 'PBKDF2', false, ['deriveBits']);
+  const bits = await crypto.subtle.deriveBits({ name: 'PBKDF2', hash: 'SHA-256', salt, iterations: iter }, key, 256);
+  return { salt: b64e(salt), hash: b64e(new Uint8Array(bits)), iter };
+}
+const normEmail = e => clean(e, 120).toLowerCase();
+async function getAcct(KV, email) { const r = await KV.get('acct:' + email); return r ? JSON.parse(r) : null; }
+async function saveAcct(KV, a) { await KV.put('acct:' + a.email, JSON.stringify(a)); }
+async function acctFromToken(KV, token) {
+  const t = clean(token, 80); if (!t) return null;
+  const email = await KV.get('tok:' + t); return email ? getAcct(KV, email) : null;
+}
+async function newToken(KV, email) {
+  const t = rnd(40, ID_ABC); await KV.put('tok:' + t, email, { expirationTtl: 60 * 60 * 24 * 120 }); return t;
+}
+const pub = a => ({ name: a.name, email: a.email, role: a.role || 'teacher', school: a.school || null, schoolName: a.schoolName || '', classes: (a.classes || []).map(c => ({ code: c.code, key: c.key, name: c.name })) });
+
+async function acctApi(path, b, env, json) {
+  const KV = env.TUKI_KV;
+  if (!KV) return json({ error: 'no_kv' }, 500);
+
+  if (path === '/teacher/check') return json(teacherOk(env, b) ? { ok: true } : { error: 'bad_tcode' }, teacherOk(env, b) ? 200 : 403);
+
+  if (path === '/teacher/register') {
+    if (!teacherOk(env, b)) return json({ error: 'bad_tcode' }, 403);
+    const email = normEmail(b.email), name = clean(b.name, 60), pw = String(b.password || '');
+    if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) return json({ error: 'bad_email' }, 400);
+    if (!name) return json({ error: 'no_name' }, 400);
+    if (pw.length < 6) return json({ error: 'short_pw' }, 400);
+    if (await getAcct(KV, email)) return json({ error: 'email_taken' }, 409);
+    const h = await hashPw(pw);
+    const a = { email, name, salt: h.salt, hash: h.hash, iter: h.iter, role: 'teacher', classes: [], created: Date.now() };
+    await saveAcct(KV, a);
+    return json({ token: await newToken(KV, email), ...pub(a) });
+  }
+  if (path === '/teacher/login') {
+    const email = normEmail(b.email), a = await getAcct(KV, email);
+    if (!a) return json({ error: 'bad_login' }, 403);
+    const h = await hashPw(String(b.password || ''), a.salt, a.iter || PW_ITER);
+    if (h.hash !== a.hash) return json({ error: 'bad_login' }, 403);
+    return json({ token: await newToken(KV, email), ...pub(a) });
+  }
+
+  const a = await acctFromToken(KV, b.token);
+  if (!a) return json({ error: 'bad_token' }, 401);
+
+  if (path === '/teacher/me') return json(pub(a));
+  if (path === '/teacher/logout') { await KV.delete('tok:' + clean(b.token, 80)); return json({ ok: true }); }
+  if (path === '/teacher/addclass') {
+    const code = clean(b.code, 10).toUpperCase(), raw = await KV.get('class:' + code);
+    if (!raw) return json({ error: 'no_class' }, 404);
+    const cls = JSON.parse(raw);
+    if (cls.key !== clean(b.key, 40)) return json({ error: 'bad_key' }, 403);
+    a.classes = [...(a.classes || []).filter(c => c.code !== code), { code, key: cls.key, name: cls.name }];
+    await saveAcct(KV, a);
+    return json(pub(a));
+  }
+  if (path === '/teacher/removeclass') {
+    const code = clean(b.code, 10).toUpperCase();
+    a.classes = (a.classes || []).filter(c => c.code !== code);
+    await saveAcct(KV, a);
+    return json(pub(a));
+  }
+  // בית ספר: מנהל/ת פותח/ת, מורים מצטרפים עם קוד
+  if (path === '/school/create') {
+    const name = clean(b.name, 80);
+    if (!name) return json({ error: 'no_name' }, 400);
+    let code = '';
+    for (let i = 0; i < 6; i++) { code = 'S' + rnd(5, CODE_ABC); if (!(await KV.get('school:' + code))) break; }
+    await KV.put('school:' + code, JSON.stringify({ name, owner: a.email, teachers: [a.email], created: Date.now() }));
+    a.school = code; a.schoolName = name; a.role = 'principal';
+    await saveAcct(KV, a);
+    return json({ code, ...pub(a) });
+  }
+  if (path === '/school/join') {
+    const code = clean(b.code, 10).toUpperCase(), raw = await KV.get('school:' + code);
+    if (!raw) return json({ error: 'no_school' }, 404);
+    const sc = JSON.parse(raw);
+    if (!sc.teachers.includes(a.email)) sc.teachers.push(a.email);
+    await KV.put('school:' + code, JSON.stringify(sc));
+    a.school = code; a.schoolName = sc.name; if (a.role !== 'principal') a.role = 'teacher';
+    await saveAcct(KV, a);
+    return json(pub(a));
+  }
+  if (path === '/school/view') {
+    if (!a.school) return json({ error: 'no_school' }, 404);
+    const raw = await KV.get('school:' + a.school);
+    if (!raw) return json({ error: 'no_school' }, 404);
+    const sc = JSON.parse(raw);
+    if (sc.owner !== a.email) return json({ error: 'not_principal' }, 403);
+    const weekAgo = Date.now() - 7 * 864e5;
+    const teachers = [];
+    for (const em of sc.teachers.slice(0, 60)) {
+      const t = await getAcct(KV, em); if (!t) continue;
+      const classes = [];
+      for (const c of (t.classes || []).slice(0, 20)) {
+        const craw = await KV.get('class:' + c.code); if (!craw) continue;
+        const cls = JSON.parse(craw);
+        let n = 0, active = 0, week = 0, rsum = 0, rcnt = 0, cursor;
+        do {
+          const list = await KV.list({ prefix: `s:${c.code}:`, cursor });
+          for (const k of list.keys) {
+            const m = k.metadata || {}; n++;
+            if ((m.last || 0) > weekAgo) active++;
+            week += m.week || 0;
+            Object.values(m.lr || {}).forEach(v => { rsum += v; rcnt++; });
+          }
+          cursor = list.list_complete ? null : list.cursor;
+        } while (cursor);
+        classes.push({ code: c.code, name: cls.name, students: n, active, avgWeek: n ? Math.round(week / n) : 0, readiness: rcnt ? Math.round(rsum / rcnt) : null, lists: (cls.lists || []).length });
+      }
+      teachers.push({ name: t.name, email: t.email, classes });
+    }
+    return json({ name: sc.name, code: a.school, teachers });
   }
   return json({ error: 'not_found' }, 404);
 }

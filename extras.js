@@ -155,7 +155,7 @@ const _record=record;
 window.record=function(skill,ok,lvl,info){const before=S.level;const x=_record(skill,ok,lvl,info);buzz(ok?'good':'bad');
  if(lvlIdx(S.level)>lvlIdx(before)){S.certNew=before;save();}return x;};
 const _renderTop=renderTop;
-window.renderTop=function(){_renderTop();if(typeof SCHOOL!=='undefined'&&SCHOOL)$$('#topin .chip').forEach(c=>{if(/🎓/.test(c.textContent))c.remove();});const set=$('#topin .iconbtn');if(set&&!$('#coinchip'))set.insertAdjacentHTML('beforebegin',`<span class="chip" id="coinchip" title="המטבעות שלי" onclick="open_('pet')" style="cursor:pointer">🪙 ${S.coins||0}</span>`);};
+window.renderTop=function(){_renderTop();if(typeof SCHOOL!=='undefined'&&SCHOOL)$$('#topin .chip').forEach(c=>{if(/🎓/.test(c.textContent)||(S.tmode&&!S.cls))c.remove();});const set=$('#topin .iconbtn');if(set&&!$('#coinchip'))set.insertAdjacentHTML('beforebegin',`<span class="chip" id="coinchip" title="המטבעות שלי" onclick="open_('pet')" style="cursor:pointer">🪙 ${S.coins||0}</span>`);};
 
 /* ---------------- מצב כהה ---------------- */
 const mq=window.matchMedia?matchMedia('(prefers-color-scheme: dark)'):null;
@@ -1123,7 +1123,7 @@ window.settingsView=function(){_settings3();const sr=$('#sr');if(!sr)return;
 const SCHOOL=true;
 const tTests=()=>(S.tests||[]).filter(t=>t.tid&&S.cls&&(t.cc||S.cls.code)===S.cls.code).sort((a,b)=>(b.tver||0)-(a.tver||0));
 const tWords=()=>{const seen=new Set(),out=[];tTests().forEach(t=>examWords(t).forEach(w=>{if(!seen.has(w.en)){seen.add(w.en);out.push(w);}}));return out;};
-function stateBlob(){try{const c=JSON.parse(JSON.stringify(S));c.settings=Object.assign({},c.settings,{aiKey:''});delete c.teach;delete c.tcode;delete c.tmode;delete c.cls;const j=JSON.stringify(c);return j.length<1400000?j:null;}catch(e){return null;}}
+function stateBlob(){try{const c=JSON.parse(JSON.stringify(S));c.settings=Object.assign({},c.settings,{aiKey:''});delete c.teach;delete c.tcode;delete c.tmode;delete c.cls;delete c.tacct;delete c.tlocal;const j=JSON.stringify(c);return j.length<1400000?j:null;}catch(e){return null;}}
 function gateView(prefill,more){
  renderTop();
  view(`<div class="stack" style="max-width:520px;margin:0 auto">${more&&S.cls?`<div class="ses-head">${back()}<h2 style="margin:0">➕ הצטרפות לכיתה נוספת</h2></div>`:''}
@@ -1133,7 +1133,10 @@ function gateView(prefill,more){
   <input class="inp" id="gname" placeholder="השם שלך (שם פרטי)" autocomplete="off" value="${esc(more?(S.myName||''):'')}">
   <button class="btn primary" id="gjoin" style="font-size:19px">כניסה לכיתה</button>
   <details class="small"><summary class="muted">כבר נכנסתי ממכשיר אחר</summary><div class="stack" style="margin-top:10px"><p class="small" style="margin:0">מקלידים את קוד הכיתה (למעלה) ואת הקוד האישי שלך. המורה יכולה לראות אותו בלוח המורה.</p><div class="row"><input class="inp en" id="gpin" placeholder="קוד אישי" style="flex:1;text-transform:uppercase"><button class="btn ghost" id="grest">המשך מאיפה שעצרתי</button></div></div></details></div>
- <div class="card stack" ${more?'hidden':''}><h3>👩‍🏫 אני מורה</h3><div class="row"><input class="inp en" id="gt" placeholder="קוד מורה" autocomplete="off" style="flex:1;min-width:150px;text-transform:uppercase"><button class="btn ghost" id="gtgo">כניסה</button></div><span class="small" id="gtres"></span></div></div>`,'gate');
+ <div class="card stack" ${more?'hidden':''}><h3>👩‍🏫 אני מורה</h3>
+  <input class="inp en" id="tem" type="email" placeholder="מייל" autocomplete="username" dir="ltr"><input class="inp" id="tpw" type="password" placeholder="סיסמה" autocomplete="current-password" dir="ltr">
+  <div id="treg" hidden class="stack"><input class="inp" id="tnm" placeholder="השם שלך (יופיע לתלמידים ולמנהל)"><input class="inp en" id="gt" placeholder="קוד מורה (מקבלים מ-Tuki)" autocomplete="off" style="text-transform:uppercase"></div>
+  <div class="row"><button class="btn primary" id="gtgo">כניסה</button><button class="btn ghost small" id="tnew">אין לי חשבון – הרשמה</button></div><span class="small" id="gtres"></span></div></div>`,'gate');
  const busy=(b,on,txt)=>{b.disabled=on;b.innerHTML=on?'<span class="loader"></span>':txt;};
  $('#gjoin').onclick=async()=>{const code=$('#gcode').value.trim().toUpperCase(),name=$('#gname').value.trim();if(!code)return toast('צריך קוד כיתה');if(!name)return toast('כתבו את השם שלכם');
   const b=$('#gjoin');busy(b,true);
@@ -1144,13 +1147,17 @@ function gateView(prefill,more){
  $('#grest').onclick=async()=>{const code=$('#gcode').value.trim().toUpperCase(),pin=$('#gpin').value.trim().toUpperCase();if(!code||!pin)return toast('צריך קוד כיתה וקוד אישי');
   const b=$('#grest');busy(b,true);
   try{const r=await api('/class/restore',{code,pin});
-   if(r.state){try{const keep={teach:S.teach,tcode:S.tcode,tmode:S.tmode};S=merge(JSON.parse(r.state));Object.assign(S,keep);}catch(e){}}
+   if(r.state){try{const keep={teach:S.teach,tcode:S.tcode,tmode:S.tmode,tacct:S.tacct};S=merge(JSON.parse(r.state));Object.assign(S,keep);}catch(e){}}
    S.cls={code,id:r.id,pin,name:r.className,me:r.name,message:r.message||''};S.myName=r.name;S.placementDone=true;save();
    await syncClass(true);toast('👋 שלום '+r.name+'! ההתקדמות שלך חזרה');home();}
   catch(e){toast(e&&e.code==='bad_pin'?'הקוד האישי לא נכון':e&&(e.code==='not_found'||e.code==='bad_prompt')?'צריך לעדכן את השרת':'לא הצלחתי – בדקו את הקודים');busy(b,false,'המשך מאיפה שעצרתי');}};
- $('#gtgo').onclick=async()=>{const c=$('#gt').value.trim().toUpperCase();if(!c)return;const b=$('#gtgo');busy(b,true);
-  try{await _api('/teacher/check',{tcode:c});S.tcode=c;S.tmode=true;S.placementDone=true;save();toast('✅ ברוכה הבאה!');home();}
-  catch(e){$('#gtres').innerHTML='<span style="color:var(--bad)">❌ '+(e&&e.code==='bad_tcode'?'הקוד לא נכון':'אין חיבור לשרת')+'</span>';busy(b,false,'כניסה');}};}
+ let reg=false;$('#tnew').onclick=()=>{reg=!reg;$('#treg').hidden=!reg;$('#gtgo').textContent=reg?'יצירת חשבון':'כניסה';$('#tnew').textContent=reg?'יש לי חשבון – כניסה':'אין לי חשבון – הרשמה';$('#tpw').setAttribute('autocomplete',reg?'new-password':'current-password');};
+ $('#gtgo').onclick=async()=>{const email=$('#tem').value.trim(),password=$('#tpw').value;const b=$('#gtgo'),lbl=b.textContent;if(!email||!password)return toast('צריך מייל וסיסמה');
+  const E={bad_tcode:'קוד המורה לא נכון',bad_login:'מייל או סיסמה לא נכונים',email_taken:'כבר יש חשבון עם המייל הזה – לחצו "יש לי חשבון"',bad_email:'המייל לא תקין',short_pw:'סיסמה של 6 תווים לפחות',no_name:'כתבו את השם שלכם',rate_limited:'יותר מדי ניסיונות – נסו שוב בעוד דקה',not_found:'צריך לעדכן את השרת (worker.js)'};
+  busy(b,true);
+  try{const r=reg?await _api('/teacher/register',{email,password,name:$('#tnm').value.trim(),tcode:$('#gt').value.trim().toUpperCase()}):await _api('/teacher/login',{email,password});
+   if(reg)S.tcode=$('#gt').value.trim().toUpperCase();setAcct(r);S.placementDone=true;save();toast('✅ ברוכה הבאה, '+r.name+'!');home();}
+  catch(e){$('#gtres').innerHTML='<span style="color:var(--bad)">❌ '+(E[e&&e.code]||'אין חיבור לשרת')+'</span>';busy(b,false,lbl);}};}
 function studentHome(){
  const ts=tTests(),t0=now();const all=tWords();
  const due=all.filter(w=>S.words[w.en]&&S.words[w.en].due<=t0);
@@ -1364,6 +1371,92 @@ const _studentHome=studentHome;
 studentHome=function(){ensureClasses();_studentHome();const hero=$('#app .hero');if(!hero)return;
  hero.insertAdjacentHTML('afterend',`<div class="row" style="justify-content:space-between">${S.classes.length>1?`<select class="inp" id="clsw" style="flex:1;max-width:260px">${S.classes.map(c=>`<option value="${esc(c.code)}" ${c.code===S.cls.code?'selected':''}>🏫 ${esc(c.name)}</option>`).join('')}</select>`:'<span></span>'}<button class="btn ghost small" id="cladd">➕ כיתה נוספת</button></div>`);
  const sw=$('#clsw');if(sw)sw.onchange=()=>switchClass(sw.value);$('#cladd').onclick=()=>gateView('',true);};
+
+
+/* ===================================================================
+   👩‍🏫 חשבון מורה (מייל + סיסמה) – כניסה מכל מכשיר
+   =================================================================== */
+function setAcct(r){S.tacct={token:r.token||(S.tacct&&S.tacct.token),name:r.name,email:r.email,role:r.role,school:r.school,schoolName:r.schoolName};S.tmode=true;
+ const local=S.teach||[];const srv=r.classes||[];S.teach=srv.slice();local.forEach(c=>{if(!S.teach.some(x=>x.code===c.code))S.teach.push(c);});S.tlocal=local.filter(c=>!srv.some(x=>x.code===c.code));}
+async function acctSync(){if(!S.tacct||!S.tacct.token)return;
+ try{let r=await _api('/teacher/me',{token:S.tacct.token});
+  for(const c of (S.tlocal||[])){try{r=await _api('/teacher/addclass',{token:S.tacct.token,code:c.code,key:c.key});}catch(e){}}S.tlocal=[];
+  setAcct(Object.assign({token:S.tacct.token},r));save();}
+ catch(e){if(e&&e.code==='bad_token'){toast('צריך להתחבר מחדש');teacherLogout(true);}}}
+async function teacherLogout(silent){try{if(S.tacct&&S.tacct.token&&!silent)await _api('/teacher/logout',{token:S.tacct.token});}catch(e){}
+ S.tacct=null;S.tmode=false;S.teach=[];S.tcode='';S.tlocal=[];save();home();}
+window.tkLogout=()=>teacherLogout(false);
+const _api3=window.api;
+window.api=function(path,body){if(S.tacct&&S.tacct.token&&(path==='/class/create'||path==='/room/create'))body=Object.assign({},body,{token:S.tacct.token});return _api3(path,body);};
+let acctSynced=0;
+const _teacherHome2=window.teacherHome;
+window.teacherHome=function(){
+ if(S.tacct&&now()-acctSynced>30000){acctSynced=now();acctSync().then(()=>{if(currentView==='teacher')window.teacherHome();});}
+ _teacherHome2();if(currentView!=='teacher')return;const top=$('#app .stack');if(!top)return;const A=S.tacct;
+ top.insertAdjacentHTML('afterbegin',A?`<div class="card stack" style="padding:14px 16px"><div class="row" style="justify-content:space-between"><div><b>שלום ${esc(A.name)} 👋</b><div class="small muted en">${esc(A.email)}</div></div><button class="btn ghost small" onclick="tkLogout()">יציאה</button></div>
+  <div class="row"><button class="btn ghost" id="tguide">📘 מדריך מהיר</button><button class="btn ghost" id="tschool">🏫 ${A.school?esc(A.schoolName||'בית הספר'):'בית ספר'}</button>${A.role==='principal'?'<button class="btn accent" id="tprin">📊 לוח מנהל</button>':''}</div></div>`
+  :`<div class="note">💡 <b>מומלץ:</b> צרי חשבון מורה (מייל וסיסמה) כדי להיכנס לכיתות מכל מכשיר. <button class="btn ghost small" onclick="tkLogout()">יציאה ויצירת חשבון</button></div><div class="row"><button class="btn ghost" id="tguide">📘 מדריך מהיר</button></div>`);
+ $('#tguide').onclick=guideView;const ts=$('#tschool');if(ts)ts.onclick=schoolSetup;const tp=$('#tprin');if(tp)tp.onclick=principalView;
+ if(!(S.teach||[]).length&&!S.guideSeen){S.guideSeen=1;save();guideView();}};
+
+function guideView(){
+ view(`<div class="stack"><div class="ses-head"><button class="iconbtn" onclick="teacherHome()">→</button><h2 style="margin:0">📘 מדריך מהיר למורה</h2></div>
+ ${[['1','🏫','פותחים כיתה','בלוח המורה כותבים שם לכיתה ולוחצים "צור כיתה". מקבלים קוד כיתה.'],
+    ['2','📲','מזמינים תלמידים','בתוך הכיתה: "העתק הזמנה" ומדביקים בוואטסאפ של הכיתה. התלמידים לוחצים, כותבים שם – ונכנסים.'],
+    ['3','📝','שולחים מילים','"רשימת מילים חדשה": מדביקים מילים או מצלמים דף מהספר. Tuki מתרגם, אתם בודקים ושולחים.'],
+    ['4','📚','התלמידים לומדים','כל רשימה הופכת לשיעור: הכרות, שמיעה, דיבור, איות, משחק, משפט משלי ומבדק.'],
+    ['5','📊','עוקבים','📊 ליד כל רשימה: מי סיים, ציוני מבדק והמילים הקשות לכיתה. אפשר לייצא לאקסל.'],
+    ['6','🖨️','ועוד','🖨️ דף עבודה להדפסה · 🎯 חידון כיתתי חי · 👨‍👩‍👧 דוחות להורים · ⚙️ הפעלה/כיבוי של AI.']]
+  .map(([n,ic,t,d])=>`<div class="card row" style="align-items:flex-start;gap:14px"><div style="font-size:34px">${ic}</div><div><b style="font-size:18px">${n}. ${t}</b><p style="margin:4px 0 0">${d}</p></div></div>`).join('')}
+ <div class="note">🔑 <b>קודים אישיים:</b> כל תלמיד מקבל קוד אישי. איתו הוא נכנס ממכשיר אחר וממשיך מאיפה שעצר. הקודים מופיעים אצלך בתוך הכיתה.</div>
+ <button class="btn primary" onclick="teacherHome()">הבנתי, מתחילים!</button></div>`,'guide');}
+
+function schoolSetup(){
+ const A=S.tacct;if(!A)return;
+ view(`<div class="stack"><div class="ses-head"><button class="iconbtn" onclick="teacherHome()">→</button><h2 style="margin:0">🏫 בית ספר</h2></div>
+ ${A.school?`<div class="card stack"><p style="margin:0">את/ה ב<b>${esc(A.schoolName)}</b>${A.role==='principal'?` כמנהל/ת.`:'.'}</p>${A.role==='principal'?`<p style="margin:0">קוד בית הספר למורים: <b class="en" style="font-size:24px;letter-spacing:2px">${esc(A.school)}</b></p><p class="small muted" style="margin:0">מורים נכנסים לחשבון שלהם ← 🏫 בית ספר ← מקלידים את הקוד. אז הכיתות שלהם מופיעות בלוח המנהל.</p><button class="btn accent" onclick="tkPrincipal()">📊 ללוח המנהל</button>`:''}</div>`:''}
+ <div class="card stack"><h3>הצטרפות לבית ספר (מורה)</h3><p class="small muted" style="margin:0">קיבלת קוד מהמנהל/ת? כך המנהל/ת יראה/תראה את הכיתות שלך.</p><div class="row"><input class="inp en" id="scj" placeholder="קוד בית ספר" style="flex:1;text-transform:uppercase"><button class="btn ghost" id="scjb">הצטרפות</button></div></div>
+ ${A.role!=='principal'?`<div class="card stack"><h3>פתיחת בית ספר (מנהל/ת)</h3><p class="small muted" style="margin:0">רק למנהל/ת או לרכז/ת. תקבלו קוד שמחלקים למורים, ולוח מנהל עם כל הכיתות.</p><div class="row"><input class="inp" id="scn" placeholder="שם בית הספר" style="flex:1"><button class="btn ghost" id="scnb">פתיחה</button></div></div>`:''}</div>`,'school');
+ const E={no_school:'לא מצאתי בית ספר עם הקוד הזה',no_name:'כתבו שם'};
+ $('#scjb').onclick=async()=>{try{const r=await _api('/school/join',{token:A.token,code:$('#scj').value.trim().toUpperCase()});setAcct(Object.assign({token:A.token},r));save();toast('✅ הצטרפת ל'+r.schoolName);schoolSetup();}catch(e){toast(E[e&&e.code]||'לא הצלחתי');}};
+ const nb=$('#scnb');if(nb)nb.onclick=async()=>{try{const r=await _api('/school/create',{token:A.token,name:$('#scn').value.trim()});setAcct(Object.assign({token:A.token},r));save();toast('✅ בית הספר נפתח');schoolSetup();}catch(e){toast(E[e&&e.code]||'לא הצלחתי');}};}
+
+async function principalView(){
+ const A=S.tacct;if(!A)return;
+ view(`<div class="card"><span class="loader"></span> טוען את בית הספר...</div>`,'principal');
+ let r;try{r=await _api('/school/view',{token:A.token});}catch(e){toast(e&&e.code==='not_principal'?'רק המנהל/ת רואה את הלוח הזה':'לא הצלחתי לטעון');return teacherHome();}
+ const all=r.teachers.flatMap(t=>t.classes);const N=all.reduce((a,c)=>a+c.students,0),act=all.reduce((a,c)=>a+c.active,0);
+ const rd=all.filter(c=>c.readiness!=null);const avgR=rd.length?Math.round(rd.reduce((a,c)=>a+c.readiness,0)/rd.length):null;
+ view(`<div class="stack"><div class="ses-head"><button class="iconbtn" onclick="teacherHome()">→</button><h2 style="margin:0">📊 ${esc(r.name)}</h2><button class="btn ghost small" style="margin-inline-start:auto" onclick="tkPrincipal()">🔄</button></div>
+ <div class="grid" style="grid-template-columns:repeat(4,1fr)"><div class="card stat"><span class="muted small">מורים</span><b>${r.teachers.length}</b></div><div class="card stat"><span class="muted small">כיתות</span><b>${all.length}</b></div><div class="card stat"><span class="muted small">תלמידים</span><b>${N}</b></div><div class="card stat"><span class="muted small">פעילים השבוע</span><b>${N?Math.round(act/N*100):0}%</b></div></div>
+ ${avgR!=null?`<div class="card stat" style="text-align:center"><span class="muted small">מוכנות ממוצעת לרשימות המילים</span><b>${avgR}%</b></div>`:''}
+ ${r.teachers.map(t=>`<div class="card"><h3>👩‍🏫 ${esc(t.name)}</h3>${t.classes.length?`<div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:14px;min-width:420px"><tr style="color:var(--muted)"><th style="text-align:start;padding:6px">כיתה</th><th>תלמידים</th><th>פעילים השבוע</th><th>XP ממוצע</th><th>מוכנות</th><th>רשימות</th></tr>
+  ${t.classes.map(c=>`<tr style="border-top:1px solid var(--line);text-align:center"><td style="text-align:start;padding:8px 6px"><b>${esc(c.name)}</b></td><td>${c.students}</td><td>${c.active}</td><td>${c.avgWeek}</td><td>${c.readiness!=null?c.readiness+'%':'—'}</td><td>${c.lists}</td></tr>`).join('')}</table></div>`:'<p class="small muted" style="margin:0">עוד אין כיתות</p>'}</div>`).join('')}
+ <p class="small muted">קוד בית הספר למורים: <b class="en">${esc(r.code)}</b></p></div>`,'principal');}
+window.tkPrincipal=principalView;
+
+/* ייצוא לאקסל + עריכת תלמידים בתוך מסך הכיתה */
+function csvCell(v){v=v==null?'':String(v);return /[",\n]/.test(v)?'"'+v.replace(/"/g,'""')+'"':v;}
+function exportClass(code){
+ const r=G.lastView;if(!r)return;const lists=r.lists||[];const st=(r.students||[]).slice().sort((a,b)=>String(a.name).localeCompare(String(b.name),'he'));
+ const head=['שם','קוד אישי','XP השבוע','XP כולל','רצף ימים','מילים שנלמדו','דיוק %','פעילות אחרונה'];lists.forEach(l=>{head.push(l.name+' – שלבים',l.name+' – מבדק',l.name+' – מוכנות %');});
+ const rows=st.map(s=>{const row=[s.name,s.pin||'',s.week||0,s.xp||0,s.streak||0,s.words||0,s.acc||0,s.last?new Date(s.last).toLocaleString('he-IL'):''];
+  lists.forEach(l=>{row.push((s.ls||{})[l.id]!=null?(s.ls||{})[l.id]:'',(s.lq||{})[l.id]!=null?(s.lq||{})[l.id]:'',(s.lr||{})[l.id]!=null?(s.lr||{})[l.id]:'');});return row;});
+ const csv='﻿'+[head,...rows].map(r=>r.map(csvCell).join(',')).join('\r\n');
+ const blob=new Blob([csv],{type:'text/csv;charset=utf-8'});const name=`Tuki-${r.name}-${new Date().toISOString().slice(0,10)}.csv`;
+ const f=new File([blob],name,{type:'text/csv'});
+ if(isApp&&navigator.canShare&&navigator.canShare({files:[f]})){navigator.share({files:[f]}).catch(()=>{});return;}
+ const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=name;document.body.appendChild(a);a.click();setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove();},1000);toast('📊 הקובץ ירד – פותחים אותו באקסל');}
+const _openClass4=window.openClass;
+window.openClass=async function(code){await _openClass4(code);if(currentView!=='class'||!G.lastView)return;const c=(S.teach||[]).find(x=>x.code===code);const r=G.lastView;
+ const cp=$('#cpar');if(cp)cp.insertAdjacentHTML('afterend',`<button class="btn ghost" id="cexp">📊 ייצוא ציונים לאקסל</button>`);const ce=$('#cexp');if(ce)ce.onclick=()=>exportClass(code);
+ const det=[...$$('#app details')].find(d=>/קודים אישיים/.test(d.textContent));if(!det)return;
+ det.querySelector('summary').innerHTML='<b>🔑 תלמידים: קודים אישיים ועריכה</b>';
+ $$('.lb',det).forEach((row,i)=>{const s=(r.students||[])[i];if(!s)return;row.insertAdjacentHTML('beforeend',`<button class="iconbtn" title="שינוי שם" data-ren="${esc(s.id)}" style="font-size:14px">✏️</button><button class="iconbtn" title="קוד אישי חדש" data-np="${esc(s.id)}" style="font-size:14px">🔄</button>`);});
+ $$('[data-ren]',det).forEach(b=>b.onclick=async()=>{const s=r.students.find(x=>x.id===b.dataset.ren);const nm=prompt('שם חדש לתלמיד/ה:',s?s.name:'');if(!nm||!nm.trim())return;
+  try{await api('/class/student',{code,key:c.key,id:b.dataset.ren,name:nm.trim()});toast('✅ השם עודכן');openClass(code);}catch(e){classErr(e);}});
+ $$('[data-np]',det).forEach(b=>b.onclick=async()=>{if(!b.dataset.armed){b.dataset.armed=1;b.textContent='בטוח?';return;}
+  try{const x=await api('/class/student',{code,key:c.key,id:b.dataset.np,newPin:true});toast('🔑 קוד חדש: '+x.pin);openClass(code);}catch(e){classErr(e);}});};
 
 /* ===================================================================
    הפעלה
