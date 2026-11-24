@@ -1124,7 +1124,7 @@ const SCHOOL=true;
 const tTests=()=>(S.tests||[]).filter(t=>t.tid&&S.cls&&(t.cc||S.cls.code)===S.cls.code).sort((a,b)=>(b.tver||0)-(a.tver||0));
 const tWords=()=>{const seen=new Set(),out=[];tTests().forEach(t=>examWords(t).forEach(w=>{if(!seen.has(w.en)){seen.add(w.en);out.push(w);}}));return out;};
 function stateBlob(){try{const c=JSON.parse(JSON.stringify(S));c.settings=Object.assign({},c.settings,{aiKey:''});delete c.teach;delete c.tcode;delete c.tmode;delete c.cls;delete c.tacct;delete c.tlocal;const j=JSON.stringify(c);return j.length<1400000?j:null;}catch(e){return null;}}
-function gateView(prefill,more){
+function gateView(prefill,more,regMode){
  renderTop();
  view(`<div class="stack" style="max-width:520px;margin:0 auto">${more&&S.cls?`<div class="ses-head">${back()}<h2 style="margin:0">➕ הצטרפות לכיתה נוספת</h2></div>`:''}
  <div style="text-align:center"><img src="${LOGO}" alt="Tuki" style="width:96px;height:96px;border-radius:24px"><h1 style="margin:10px 0 0">ברוכים הבאים ל-Tuki</h1><p class="muted" style="margin:4px 0 0">מתרגלים אנגלית עם המילים מהשיעור 🦜</p></div>
@@ -1151,7 +1151,8 @@ function gateView(prefill,more){
    S.cls={code,id:r.id,pin,name:r.className,me:r.name,message:r.message||''};S.myName=r.name;S.placementDone=true;save();
    await syncClass(true);toast('👋 שלום '+r.name+'! ההתקדמות שלך חזרה');home();}
   catch(e){toast(e&&e.code==='bad_pin'?'הקוד האישי לא נכון':e&&(e.code==='not_found'||e.code==='bad_prompt')?'צריך לעדכן את השרת':'לא הצלחתי – בדקו את הקודים');busy(b,false,'המשך מאיפה שעצרתי');}};
- let reg=false;$('#tnew').onclick=()=>{reg=!reg;$('#treg').hidden=!reg;$('#gtgo').textContent=reg?'יצירת חשבון':'כניסה';$('#tnew').textContent=reg?'יש לי חשבון – כניסה':'אין לי חשבון – הרשמה';$('#tpw').setAttribute('autocomplete',reg?'new-password':'current-password');};
+ let reg=false;const tnew=()=>{reg=!reg;$('#treg').hidden=!reg;$('#gtgo').textContent=reg?'יצירת חשבון':'כניסה';$('#tnew').textContent=reg?'יש לי חשבון – כניסה':'אין לי חשבון – הרשמה';$('#tpw').setAttribute('autocomplete',reg?'new-password':'current-password');};$('#tnew').onclick=tnew;
+ if(regMode){tnew();$('#gtres').innerHTML='<span class="small">👋 צרי חשבון מורה – הכיתות שכבר פתחת במכשיר הזה ייכנסו אליו אוטומטית.</span>';$('#tem').focus();}
  $('#gtgo').onclick=async()=>{const email=$('#tem').value.trim(),password=$('#tpw').value;const b=$('#gtgo'),lbl=b.textContent;if(!email||!password)return toast('צריך מייל וסיסמה');
   const E={bad_tcode:'קוד המורה לא נכון',bad_login:'מייל או סיסמה לא נכונים',email_taken:'כבר יש חשבון עם המייל הזה – לחצו "יש לי חשבון"',bad_email:'המייל לא תקין',short_pw:'סיסמה של 6 תווים לפחות',no_name:'כתבו את השם שלכם',rate_limited:'יותר מדי ניסיונות – נסו שוב בעוד דקה',not_found:'צריך לעדכן את השרת (worker.js)'};
   busy(b,true);
@@ -1383,7 +1384,9 @@ async function acctSync(){if(!S.tacct||!S.tacct.token)return;
   for(const c of (S.tlocal||[])){try{r=await _api('/teacher/addclass',{token:S.tacct.token,code:c.code,key:c.key});}catch(e){}}S.tlocal=[];
   setAcct(Object.assign({token:S.tacct.token},r));save();}
  catch(e){if(e&&e.code==='bad_token'){toast('צריך להתחבר מחדש');teacherLogout(true);}}}
-async function teacherLogout(silent){try{if(S.tacct&&S.tacct.token&&!silent)await _api('/teacher/logout',{token:S.tacct.token});}catch(e){}
+async function teacherLogout(silent){const had=!!(S.tacct&&S.tacct.token);try{if(had&&!silent)await _api('/teacher/logout',{token:S.tacct.token});}catch(e){}
+ /* מורה בלי חשבון (מלפני החשבונות): שומרים את הכיתות במכשיר, כדי שייכנסו לחשבון החדש אחרי ההרשמה */
+ if(!had){S.tacct=null;S.tmode=false;S.tcode='';save();return gateView('',false,true);}
  S.tacct=null;S.tmode=false;S.teach=[];S.tcode='';S.tlocal=[];save();home();}
 window.tkLogout=()=>teacherLogout(false);
 const _api3=window.api;
@@ -1395,7 +1398,7 @@ window.teacherHome=function(){
  _teacherHome2();if(currentView!=='teacher')return;const top=$('#app .stack');if(!top)return;const A=S.tacct;
  top.insertAdjacentHTML('afterbegin',A?`<div class="card stack" style="padding:14px 16px"><div class="row" style="justify-content:space-between"><div><b>שלום ${esc(A.name)} 👋</b><div class="small muted en">${esc(A.email)}</div></div><button class="btn ghost small" onclick="tkLogout()">יציאה</button></div>
   <div class="row"><button class="btn ghost" id="tguide">📘 מדריך מהיר</button><button class="btn ghost" id="tschool">🏫 ${A.school?esc(A.schoolName||'בית הספר'):'בית ספר'}</button>${A.role==='principal'?'<button class="btn accent" id="tprin">📊 לוח מנהל</button>':''}</div></div>`
-  :`<div class="note">💡 <b>מומלץ:</b> צרי חשבון מורה (מייל וסיסמה) כדי להיכנס לכיתות מכל מכשיר. <button class="btn ghost small" onclick="tkLogout()">יציאה ויצירת חשבון</button></div><div class="row"><button class="btn ghost" id="tguide">📘 מדריך מהיר</button></div>`);
+  :`<div class="note">⚠️ <b>כדי לפתוח כיתות חדשות צריך חשבון מורה</b> (מייל וסיסמה). הכיתות שכבר יש לך כאן יישמרו ויעברו לחשבון. <button class="btn primary small" onclick="tkLogout()">יצירת חשבון מורה</button></div><div class="row"><button class="btn ghost" id="tguide">📘 מדריך מהיר</button></div>`);
  $('#tguide').onclick=guideView;const ts=$('#tschool');if(ts)ts.onclick=schoolSetup;const tp=$('#tprin');if(tp)tp.onclick=principalView;
  if(!(S.teach||[]).length&&!S.guideSeen){S.guideSeen=1;save();guideView();}};
 
@@ -1469,6 +1472,7 @@ const DEMO_LISTS=[
  {name:'יחידה 3 – בבית הספר',words:[['pencil','עיפרון','I write with a pencil.'],['homework','שיעורי בית','I finish my homework after lunch.'],['library','ספרייה','We read books in the library.'],['break','הפסקה','We play football during the break.'],['teacher','מורה','Our teacher is very kind.'],['classroom','כיתה (חדר)','Our classroom is on the second floor.'],['exam','מבחן','I studied hard for the exam.'],['uniform','תלבושת אחידה','We wear a blue uniform.']]}];
 const DEMO_KIDS=['נועה','איתי','מאיה','יונתן','תמר','אורי','שירה','דניאל','רוני','עומר','הילה','אלון'];
 async function makeDemoClass(btn){
+ if(!(S.tacct&&S.tacct.token)&&!S.tcode){toast('קודם צריך ליצור חשבון מורה');return teacherLogout(false);}
  if(btn){btn.disabled=true;btn.innerHTML='<span class="loader"></span> בונה כיתת הדגמה...';}
  try{
   const c=await api('/class/create',{name:'כיתת הדגמה – ז׳3'});S.teach=S.teach||[];if(!S.teach.some(x=>x.code===c.code))S.teach.push({code:c.code,key:c.key,name:c.name,demo:1});save();
