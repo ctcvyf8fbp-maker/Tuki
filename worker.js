@@ -117,6 +117,11 @@ function teacherOk(env, b) {
   const got = String((b && b.tcode) || '').trim().toUpperCase();
   return !!want && got === want;
 }
+// רשימות שעוד רלוונטיות לתלמידים (בלי תאריך, או שהתאריך לא עבר לפני יותר משבוע)
+function activeLists(cls) {
+  const weekAgo = new Date(Date.now() - 7 * 864e5).toISOString().slice(0, 10);
+  return (cls.lists || []).filter(l => !l.date || l.date >= weekAgo).slice(0, 10);
+}
 const clean = (s, n) => String(s ?? '').slice(0, n).trim();
 const num = v => Math.max(0, Math.min(1e9, Math.round(+v || 0)));
 
@@ -154,12 +159,18 @@ async function classApi(path, b, env, json) {
     if (!cur || cur.value === null) return json({ error: 'no_student' }, 404);
     const d = b.data || {};
     const m = cur.metadata || {};
-    await KV.put(k, '1', { metadata: {
+    // מוכנות לכל רשימת מילים של המורה (lr) + המילים שהכי קשות לתלמיד (hard)
+    const lr = {}, hard = {};
+    Object.entries(d.lr || {}).slice(0, 8).forEach(([id, v]) => { lr[clean(id, 12)] = Math.min(100, num(v)); });
+    Object.entries(d.hard || {}).slice(0, 8).forEach(([id, ws]) => { hard[clean(id, 12)] = (Array.isArray(ws) ? ws : []).slice(0, 10).map(w => clean(w, 60)); });
+    await KV.put(k, JSON.stringify({ hard }), { metadata: {
       name: m.name || '?', joined: m.joined || Date.now(), last: Date.now(),
       lvl: clean(d.lvl, 3), xp: num(d.xp), streak: num(d.streak), words: num(d.words),
-      lessons: num(d.lessons), acc: Math.min(100, num(d.acc)), week: num(d.week),
+      lessons: num(d.lessons), acc: Math.min(100, num(d.acc)), week: num(d.week), lr,
     } });
-    return json({ ok: true, className: cls.name, message: cls.message || '' });
+    const out = { ok: true, className: cls.name, message: cls.message || '', lv: cls.listsVer || 0 };
+    if ((cls.listsVer || 0) !== (+b.lv || 0)) out.lists = activeLists(cls);
+    return json(out);
   }
 
   // טבלת מובילים לתלמידים בכיתה – רק שם ונקודות
@@ -189,7 +200,50 @@ async function classApi(path, b, env, json) {
       for (const k of list.keys) students.push({ id: k.name.split(':')[2], ...(k.metadata || {}) });
       cursor = list.list_complete ? null : list.cursor;
     } while (cursor);
-    return json({ name: cls.name, message: cls.message || '', students });
+    return json({ name: cls.name, message: cls.message || '', students, lists: cls.lists || [] });
+  }
+  // ---- רשימות מילים של המורה ----
+  if (path === '/class/list/save') {
+    const L = b.list || {};
+    const words = (Array.isArray(L.words) ? L.words : []).slice(0, 200)
+      .map(w => ({ en: clean(w && w.en, 60), he: clean(w && w.he, 80), ex: clean(w && w.ex, 160) })).filter(w => w.en);
+    if (!words.length) return json({ error: 'no_words' }, 400);
+    const id = clean(L.id, 12) || rnd(6, ID_ABC);
+    const item = { id, name: clean(L.name, 60) || 'רשימת מילים', date: clean(L.date, 10), words, updated: Date.now() };
+    cls.lists = [item, ...(cls.lists || []).filter(x => x.id !== id)].slice(0, 15);
+    cls.listsVer = Date.now();
+    await KV.put('class:' + code, JSON.stringify(cls));
+    return json({ ok: true, id });
+  }
+  if (path === '/class/list/delete') {
+    const id = clean(b.id, 12);
+    cls.lists = (cls.lists || []).filter(x => x.id !== id);
+    cls.listsVer = Date.now();
+    await KV.put('class:' + code, JSON.stringify(cls));
+    return json({ ok: true });
+  }
+  if (path === '/class/list/stats') {
+    const id = clean(b.id, 12);
+    const L = (cls.lists || []).find(x => x.id === id);
+    if (!L) return json({ error: 'no_list' }, 404);
+    const students = [], count = {};
+    let cursor;
+    do {
+      const list = await KV.list({ prefix: `s:${code}:`, cursor });
+      for (const k of list.keys) {
+        const m = k.metadata || {};
+        const pct = m.lr && id in m.lr ? m.lr[id] : null;
+        students.push({ name: m.name || '?', pct, last: m.last || 0 });
+        try {
+          const v = JSON.parse((await KV.get(k.name)) || '{}');
+          ((v.hard || {})[id] || []).forEach(w => { count[w] = (count[w] || 0) + 1; });
+        } catch {}
+      }
+      cursor = list.list_complete ? null : list.cursor;
+    } while (cursor);
+    const he = Object.fromEntries(L.words.map(w => [w.en, w.he]));
+    const hard = Object.entries(count).sort((a, b) => b[1] - a[1]).slice(0, 15).map(([en, n]) => ({ en, he: he[en] || '', n }));
+    return json({ name: L.name, date: L.date, n: L.words.length, students, hard });
   }
   if (path === '/class/message') {
     cls.message = clean(b.message, 300);

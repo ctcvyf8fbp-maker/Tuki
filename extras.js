@@ -366,7 +366,13 @@ MORE_SCEN.forEach(s=>{if(!SCENARIOS.find(x=>x.id===s.id))SCENARIOS.push(s);});
 if(S.tmode===undefined&&S.teach&&S.teach.length){S.tmode=true;}
 const tmode=()=>!!S.tmode;
 const _api=api;
-window.api=function(path,body){if(path==='/class/create'||path==='/room/create')body=Object.assign({},body,{tcode:S.tcode||''});return _api(path,body);};
+window.api=async function(path,body){
+ if(path==='/class/create'||path==='/room/create')body=Object.assign({},body,{tcode:S.tcode||''});
+ if(path==='/class/progress'&&S.cls)body=Object.assign({},body,{lv:S.cls.lv||0});
+ const r=await _api(path,body);
+ if(path==='/class/progress'&&r&&Array.isArray(r.lists))applyLists(r.lists,r.lv);
+ if(path==='/class/view')G.lastView=r;
+ return r;};
 function teacherGate(){view(`<div class="card stack"><h2>👩‍🏫 אזור מורים</h2><p style="margin:0">האזור הזה מיועד למורים בלבד. אם את/ה מורה, היכנסו ל-⚙️ הגדרות ← "אני מורה" והקלידו את קוד המורה.</p><div class="row"><button class="btn primary" onclick="open_('settings')">⚙️ להגדרות</button><button class="btn ghost" onclick="home()">חזרה לבית</button></div></div>`,'gate');}
 
 const ROUTES={games:gamesHub,pet:petView,challenge:challengeView,camera:cameraView,aistory:aiStoryView,idioms:idiomsView,gram:gramView,pron:pronView,
@@ -381,6 +387,8 @@ window.home=function(){_home();if(currentView!=='home')return;if(!tmode())$$('#a
  const hero=$('#app .hero');if(!hero)return;let h='';
  if(S.certNew)h+=`<button class="note" style="text-align:start;width:100%" onclick="tkCert('${S.certNew}')">🎓 <b>כל הכבוד! סיימת את רמה ${S.certNew}.</b> לחצו לקבלת תעודה ←</button>`;
  if(S.path&&S.path.n>PATH_LEN&&!(S.certs&&S.certs.path))h+=`<button class="note" style="text-align:start;width:100%" onclick="tkCert('path')">🏆 <b>סיימת את כל המסלול!</b> לחצו לקבלת תעודה ←</button>`;
+ (S.tests||[]).filter(t=>t.tid&&t.words.length).forEach(t=>{const d=daysLeft(t.date);if(d!==null&&d>=0&&d<=14)return;if(d!==null&&d<0)return;
+  h+=`<button class="note" style="text-align:start;width:100%" onclick="examView('${t.id}')"><b>${esc(t.name)}</b> · מוכנות ${examReady(t)}% ← לתרגול</button>`;});
  const c=curChallenge();if(c.v()>=c.goal&&!wk().claimed)h+=`<button class="note" style="text-align:start;width:100%" onclick="open_('challenge')">🏆 <b>השלמת את האתגר השבועי!</b> לחצו לאסוף 150 🪙</button>`;
  if(h)hero.insertAdjacentHTML('afterend',h);};
 
@@ -940,6 +948,78 @@ window.tkPron=function(id){const p=PRON.find(x=>x.id===id);if(!p)return pronView
 function voiceChat(){
  if(!dictCap){toast('שיחה קולית צריכה מיקרופון – נפתח שיחה רגילה');return startChat('free');}
  startChat('free');if(typeof chat!=='undefined'&&chat){chat.voice=true;const b=$('#vmode');if(b){b.classList.add('primary');b.classList.remove('ghost');b.innerHTML='🎙️ שיחה קולית פעילה';}toast('טוקי ידבר, ואחריו פשוט מדברים 🎙️');}}
+
+
+/* ===================================================================
+   📝 רשימות מילים מהמורה
+   =================================================================== */
+/* תלמיד: הרשימות מגיעות מהשרת והופכות ל"מבחנים" בהכנה למבחן */
+function applyLists(lists,lv){
+ if(!S.cls)return;S.cls.lv=lv||0;S.tests=S.tests||[];let fresh=0;
+ const ids=new Set(lists.map(l=>'T'+l.id));
+ S.tests=S.tests.filter(t=>!t.tid||ids.has(t.id));
+ lists.forEach(l=>{let t=S.tests.find(x=>x.id==='T'+l.id);
+  if(!t){t={id:'T'+l.id,tid:l.id,name:'',date:'',words:[],created:now()};S.tests.unshift(t);fresh++;}
+  if(t.tver!==l.updated){t.name='👩‍🏫 '+l.name;t.date=l.date||'';t.words=[];addWordsToTest(t,(l.words||[]).map(w=>({en:w.en,he:w.he,ex:w.ex})));t.tver=l.updated;}});
+ save();if(fresh)toast('📝 קיבלת רשימת מילים חדשה מהמורה!');if(currentView==='home')home();}
+const _classStats=classStats;
+window.classStats=function(){const d=_classStats();const lr={},hard={};
+ (S.tests||[]).filter(t=>t.tid).slice(0,8).forEach(t=>{lr[t.tid]=examReady(t);
+  hard[t.tid]=examWords(t).filter(w=>!S.words[w.en]||S.words[w.en].box<3).sort((a,b)=>((S.words[b.en]||{}).bad||0)-((S.words[a.en]||{}).bad||0)).slice(0,10).map(w=>w.en);});
+ d.lr=lr;d.hard=hard;return d;};
+/* מורה: ניהול רשימות בתוך מסך הכיתה */
+const _openClass=openClass;
+window.openClass=async function(code){G.lastView=null;await _openClass(code);if(currentView!=='class'||!G.lastView)return;
+ const lists=G.lastView.lists||[];const first=$('#app .stack > .card');if(!first)return;
+ first.insertAdjacentHTML('afterend',`<div class="card stack" id="tlists"><h3>📝 רשימות מילים לכיתה</h3>
+ <p class="small muted" style="margin:0">מכניסים מילים, והן מופיעות לכל התלמידים בדף הבית לתרגול – כולל משחקים, הקראה ואחוז מוכנות.</p>
+ ${lists.map(l=>{const d=daysLeft(l.date);return `<div class="mist" style="align-items:center"><div><b>${esc(l.name)}</b><div class="small muted">${l.words.length} מילים${l.date?' · '+daysTxt(d):''}</div></div>
+  <div class="row" style="flex-wrap:nowrap"><button class="btn ghost" style="padding:6px 10px" data-ls="${l.id}">📊</button><button class="btn ghost" style="padding:6px 10px" data-le="${l.id}">✏️</button><button class="btn ghost" style="padding:6px 10px;color:var(--bad)" data-ld="${l.id}">🗑</button></div></div>`;}).join('')}
+ <button class="btn primary" id="tlnew">➕ רשימת מילים חדשה</button></div>`);
+ $('#tlnew').onclick=()=>tlEdit(code,null);
+ $$('[data-le]').forEach(b=>b.onclick=()=>tlEdit(code,lists.find(l=>l.id===b.dataset.le)));
+ $$('[data-ls]').forEach(b=>b.onclick=()=>tlStats(code,b.dataset.ls));
+ $$('[data-ld]').forEach(b=>b.onclick=async()=>{if(!b.dataset.armed){b.dataset.armed=1;b.textContent='בטוח?';return;}
+  const c=(S.teach||[]).find(x=>x.code===code);try{await api('/class/list/delete',{code,key:c.key,id:b.dataset.ld});toast('הרשימה נמחקה');openClass(code);}catch(e){classErr(e);}});};
+function tlEdit(code,L){
+ const c=(S.teach||[]).find(x=>x.code===code);if(!c)return teacherHome();
+ let items=L?L.words.map(w=>({...w})):[];
+ const draw=()=>{const box=$('#tlprev');if(!box)return;
+  box.innerHTML=items.length?`<h3>👀 בדיקה לפני שליחה (${items.length})</h3><p class="small muted" style="margin:0">אפשר לתקן כל תרגום. מילה בלי תרגום מסומנת באדום.</p>`+items.map((w,i)=>`<div class="mist" style="align-items:center"><b class="en" style="min-width:90px">${esc(w.en)}</b><input class="inp" data-i="${i}" value="${esc(w.he||'')}" placeholder="תרגום" style="flex:1;font-size:15px;padding:7px 10px;${w.he?'':'border-color:var(--bad)'}"><span class="row" style="flex-wrap:nowrap">${spk(w.en,'sm')}<button class="iconbtn" data-x="${i}" style="font-size:14px">✕</button></span></div>`).join(''):'';
+  $$('#tlprev input[data-i]').forEach(inp=>inp.oninput=()=>{items[+inp.dataset.i].he=inp.value.trim();inp.style.borderColor=inp.value.trim()?'':'var(--bad)';});
+  $$('#tlprev [data-x]').forEach(b=>b.onclick=()=>{items.splice(+b.dataset.x,1);draw();});
+  $('#tlsend').hidden=!items.length;};
+ view(`<div class="stack"><div class="ses-head"><button class="iconbtn" id="tlb">→</button><h2 style="margin:0">📝 ${L?'עריכת רשימה':'רשימת מילים חדשה'}</h2></div>
+ <div class="card stack"><label class="small">שם הרשימה<input class="inp" id="tln" value="${esc(L?L.name:'')}" placeholder="למשל: מבחן יחידה 3" style="margin-top:4px"></label>
+ <label class="small">תאריך יעד / מבחן (לא חובה)<input class="inp" type="date" id="tld" value="${esc(L?L.date:'')}" style="margin-top:4px"></label></div>
+ <div class="card stack"><h3>➕ הוספת מילים</h3><p class="small muted" style="margin:0">מילה בכל שורה. אפשר עם תרגום (<span class="en">airport - שדה תעופה</span>) או בלי – Tuki ישלים את התרגום, ואת/ה בודקים לפני ששולחים.</p>
+ <textarea class="inp en" id="tlt" style="min-height:130px" placeholder="airport - שדה תעופה&#10;luggage&#10;passport = דרכון"></textarea>
+ <button class="btn ghost" id="tla">🔄 הוסף ותרגם</button><div id="tlst" class="small"></div></div>
+ <div class="card stack" id="tlprev"></div>
+ <button class="btn primary" id="tlsend" style="font-size:19px" hidden>📤 שליחה לכיתה</button></div>`,'tledit');
+ $('#tlb').onclick=()=>openClass(code);
+ $('#tla').onclick=async()=>{const add=parseWordLines($('#tlt').value).filter(x=>!items.some(y=>y.en.toLowerCase()===x.en.toLowerCase()));if(!add.length)return toast('לא מצאתי מילים חדשות באנגלית');
+  const b=$('#tla');b.disabled=true;b.innerHTML='<span class="loader"></span> מתרגם...';
+  add.forEach(x=>{const f=allWords().find(y=>y.en.toLowerCase()===x.en.toLowerCase());if(f){x.he=x.he||f.he;x.ex=f.ex;}});
+  await fillTranslations(add,(i,n)=>{$('#tlst').textContent=`מתרגם ${i}/${n}...`;});
+  items=items.concat(add);$('#tlt').value='';$('#tlst').textContent='';b.disabled=false;b.textContent='🔄 הוסף ותרגם';draw();};
+ $('#tlsend').onclick=async()=>{const name=$('#tln').value.trim();if(!name)return toast('תנו שם לרשימה');
+  const miss=items.filter(w=>!w.he);if(miss.length)return toast('חסר תרגום ל: '+miss.map(w=>w.en).join(', '));
+  const b=$('#tlsend');b.disabled=true;b.innerHTML='<span class="loader"></span>';
+  try{await api('/class/list/save',{code,key:c.key,list:{id:L?L.id:'',name,date:$('#tld').value||'',words:items}});toast('✅ הרשימה נשלחה לכיתה!');openClass(code);}
+  catch(e){if(e&&e.code==='not_found')toast('צריך לעדכן את השרת (worker.js)');else classErr(e);b.disabled=false;b.textContent='📤 שליחה לכיתה';}};
+ draw();}
+async function tlStats(code,id){
+ const c=(S.teach||[]).find(x=>x.code===code);if(!c)return teacherHome();
+ view(`<div class="card"><span class="loader"></span> טוען...</div>`,'tlstats');
+ let r;try{r=await api('/class/list/stats',{code,key:c.key,id});}catch(e){classErr(e);return openClass(code);}
+ const st=r.students.sort((a,b)=>(b.pct??-1)-(a.pct??-1));const avg=st.filter(s=>s.pct!=null);const av=avg.length?Math.round(avg.reduce((a,s)=>a+s.pct,0)/avg.length):0;
+ view(`<div class="stack"><div class="ses-head"><button class="iconbtn" id="tsb">→</button><h2 style="margin:0">📊 ${esc(r.name)}</h2></div>
+ <div class="grid" style="grid-template-columns:repeat(3,1fr)"><div class="card stat"><span class="muted small">מוכנות ממוצעת</span><b>${av}%</b></div><div class="card stat"><span class="muted small">התחילו</span><b>${avg.length}/${st.length}</b></div><div class="card stat"><span class="muted small">מילים</span><b>${r.n}</b></div></div>
+ <div class="card stack"><h3>🔥 המילים הכי קשות לכיתה</h3>${r.hard.length?r.hard.map(h=>`<div class="lb"><span class="n">${h.n}</span><b class="en" style="flex:1">${esc(h.en)}</b><span>${esc(h.he)}</span>${spk(h.en,'sm')}</div>`).join('')+'<p class="small muted" style="margin:0">המספר = כמה תלמידים עוד מתקשים במילה. כדאי לחזור עליהן בשיעור.</p>':'<p class="small muted" style="margin:0">עוד אין מספיק נתונים. הם יופיעו אחרי שהתלמידים יתרגלו.</p>'}</div>
+ <div class="card"><h3>👥 מוכנות לפי תלמיד</h3>${st.map(s=>`<div class="lb"><span style="flex:1">${esc(s.name)}</span>${s.pct==null?'<span class="small muted">עוד לא התחיל/ה</span>':`<div class="sbar" style="max-width:120px"><i style="width:${s.pct}%"></i></div><b style="width:44px;text-align:end">${s.pct}%</b>`}</div>`).join('')||'<p class="muted">אין תלמידים בכיתה.</p>'}
+ <p class="small muted">הנתונים מתעדכנים כשהתלמידים פותחים את Tuki (עד כמה דקות עיכוב).</p></div></div>`,'tlstats');
+ $('#tsb').onclick=()=>openClass(code);}
 
 /* ===================================================================
    הפעלה
