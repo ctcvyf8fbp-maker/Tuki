@@ -297,7 +297,10 @@ async function roomApi(path, b, env, json) {
     const n = [10, 15, 20].includes(+b.n) ? +b.n : 10;
     let code = '';
     for (let i = 0; i < 6; i++) { code = rnd(5, CODE_ABC); if (!(await KV.get('room:' + code))) break; }
-    const room = { kind, lvl, n, seed: crypto.getRandomValues(new Uint32Array(1))[0], name: clean(b.name, 60), created: Date.now() };
+    // מילים של המורה (לא חובה) – אם יש, השאלות נבנות רק מהן
+    const words = (Array.isArray(b.words) ? b.words : []).slice(0, 60)
+      .map(w => ({ en: clean(w && w.en, 60), he: clean(w && w.he, 80) })).filter(w => w.en && w.he);
+    const room = { kind, lvl, n, seed: crypto.getRandomValues(new Uint32Array(1))[0], name: clean(b.name, 60), created: Date.now(), words: words.length >= 4 ? words : undefined };
     await KV.put('room:' + code, JSON.stringify(room), { expirationTtl: ROOM_TTL });
     return json({ code, room });
   }

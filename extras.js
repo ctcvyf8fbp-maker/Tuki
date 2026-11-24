@@ -112,8 +112,13 @@ function heOf(en){en=String(en).toLowerCase();const w=allWords().find(x=>x.en.to
 function inDeckSrs(en,ok){if(S.words[en])srs(en,ok);}
 
 /* מאגר מילים למשחקים: קודם מילים שמחכות לחזרה וטעויות, אחר כך מילים ברמה שלך */
+const schoolKid=()=>typeof SCHOOL!=='undefined'&&SCHOOL&&!(S.tmode)&&!!S.cls;
 function wpool(n,f){
- f=f||(()=>true);const all=allWords().filter(w=>w&&w.en&&w.he&&f(w));
+ f=f||(()=>true);
+ if(schoolKid()){const tw=tWords().filter(w=>w&&w.en&&w.he&&f(w));const t=now();
+  const due=shuffle(tw.filter(w=>S.words[w.en]&&S.words[w.en].due<=t)),bad=shuffle(tw.filter(w=>S.words[w.en]&&S.words[w.en].bad>0)),rest=shuffle(tw);
+  const out=[],seen=new Set();[...due,...bad,...rest].forEach(w=>{if(!seen.has(w.en)&&out.length<n){seen.add(w.en);out.push(w);}});return shuffle(out);}
+ const all=allWords().filter(w=>w&&w.en&&w.he&&f(w));
  const by=new Map(all.map(w=>[w.en,w]));const out=[],seen=new Set();const cap=Math.ceil(n/2);
  const add=(w,lim)=>{if(w&&!seen.has(w.en)&&out.length<(lim||n)){seen.add(w.en);out.push(w);}};
  const t=now();
@@ -124,7 +129,10 @@ function wpool(n,f){
  shuffle(all.filter(w=>lvlIdx(w.lvl)<li)).forEach(w=>add(w));
  shuffle(all).forEach(w=>add(w));
  return shuffle(out);}
-function dis(w,k,field){const d=distractors(w,k,field);return d.length>=k?d:d.concat(shuffle(allWords().filter(x=>x.en!==w.en&&x[field]!==w[field])).slice(0,k-d.length));}
+function dis(w,k,field){
+ if(schoolKid()){const c=shuffle(tWords().filter(x=>x.en!==w.en&&x[field]!==w[field]));const seen=new Set([w[field]]),out=[];c.forEach(x=>{if(out.length<k&&!seen.has(x[field])){seen.add(x[field]);out.push(x);}});
+  if(out.length>=k)return out;const g=distractors(w,k-out.length,field).filter(x=>!seen.has(x[field]));return out.concat(g).slice(0,k);}
+ const d=distractors(w,k,field);return d.length>=k?d:d.concat(shuffle(allWords().filter(x=>x.en!==w.en&&x[field]!==w[field])).slice(0,k-d.length));}
 
 /* ---------------- שבוע, מטבעות, טוקי ---------------- */
 function weekKey(){const d=new Date();const s=new Date(d.getFullYear(),d.getMonth(),d.getDate()-d.getDay());return s.getFullYear()+'-'+(s.getMonth()+1)+'-'+s.getDate();}
@@ -448,14 +456,15 @@ const GAMES=[
 function gamesHub(){
  const b=S.gbest||{};
  view(`<div class="stack"><div class="ses-head">${back()}<h2 style="margin:0">🎮 משחקים</h2></div>
- <p class="muted" style="margin-top:-6px">כל משחק נותן XP ומטבעות 🪙, ומשתמש במילים שאת/ה צריכים לחזור עליהן.</p>
- <div class="grid">${GAMES.filter(g=>g[0]!=='g-quiz'||tmode()).map(([id,ic,t,d])=>`<button class="mod gcard" onclick="open_('${id}')"><span class="ic">${ic}</span><span class="t">${t}</span><span class="d">${d}</span>${b[id]?`<span class="best pill">🏅 ${b[id]}</span>`:''}</button>`).join('')}</div></div>`,'games');}
+ <p class="muted" style="margin-top:-6px">${schoolKid()?'כל המשחקים משתמשים רק במילים שהמורה שלחה 📚':'כל משחק נותן XP ומטבעות 🪙, ומשתמש במילים שאת/ה צריכים לחזור עליהן.'}</p>
+ <div class="grid">${GAMES.filter(g=>(g[0]!=='g-quiz'||tmode())&&!(schoolKid()&&(g[0]==='g-chain'||g[0]==='g-quiz'))).map(([id,ic,t,d])=>`<button class="mod gcard" onclick="open_('${id}')"><span class="ic">${ic}</span><span class="t">${t}</span><span class="d">${d}</span>${b[id]?`<span class="best pill">🏅 ${b[id]}</span>`:''}</button>`).join('')}</div></div>`,'games');}
 function gameEnd(id,title,score,line,xp){
  xp=Math.max(5,Math.round(xp));addXP(xp);wk().games++;S.gbest=S.gbest||{};const nb=score>(S.gbest[id]||0);if(nb)S.gbest[id]=score;save();buzz('good');
  view(`<div class="card stack" style="text-align:center"><div style="font-size:54px">${xp>=30?'🏆':'🎉'}</div><h1>${title}</h1>
  <p style="font-size:18px;margin:0">${line}</p><p style="margin:0"><b>+${xp} XP</b> · +${Math.max(1,Math.round(xp/4))} 🪙${nb&&score?' · 🏅 שיא חדש!':''}</p>
  <div class="row" style="justify-content:center"><button class="btn primary" onclick="open_('${id}')">🔁 שוב</button><button class="btn ghost" onclick="open_('games')">🎮 משחקים</button><button class="btn ghost" onclick="home()">🏠 בית</button></div></div>`,'gameend');}
 
+function needMore(title,min){view(`${ghead(title)}<div class="card stack" style="text-align:center"><div style="font-size:54px">🦜</div><b>צריך עוד מילים למשחק הזה</b><p class="small muted" style="margin:0">המשחק צריך לפחות ${min} מילים מתאימות מהמורה. כשיגיעו עוד רשימות – הוא ייפתח.</p><button class="btn primary" onclick="open_('games')">🎮 משחקים אחרים</button></div>`,'game');}
 /* מקלדת אנגלית */
 function kbHTML(enter){const rows=['qwertyuiop','asdfghjkl','zxcvbnm'];
  return `<div class="kb">${rows.map((r,i)=>`<div>${i===2&&enter?'<button class="wide" data-k="enter">Enter</button>':''}${[...r].map(c=>`<button data-k="${c}">${c.toUpperCase()}</button>`).join('')}${i===2&&enter?'<button class="wide" data-k="del">⌫</button>':''}</div>`).join('')}</div>`;}
@@ -464,7 +473,7 @@ function kbBind(el,fn){$$('.kb button',el).forEach(b=>b.onclick=()=>fn(b.dataset
 
 /* ---------------- 1. מטר מילים ---------------- */
 function gRain(){
- const ws=wpool(24);let i=0,lives=3,score=0,caught=0,speed=38,y=0,last=0,locked=true,cur=null,opts=[];
+ const ws=wpool(24);if(ws.length<2)return needMore('🌧️ מטר מילים',2);let i=0,lives=3,score=0,caught=0,speed=38,y=0,last=0,locked=true,cur=null,opts=[];
  view(`${ghead('🌧️ מטר מילים')}<div class="g-hud"><span id="lv"></span><span id="sc"></span></div><div class="g-arena" id="ar"></div><div class="opts two" id="op"></div>`,'game');
  const ar=$('#ar'),op=$('#op');
  const hud=()=>{$('#lv').textContent='❤️'.repeat(lives)+'🤍'.repeat(3-lives);$('#sc').textContent=score+' נק׳';};
@@ -483,7 +492,7 @@ function gRain(){
 
 /* ---------------- 2. נכון או לא ---------------- */
 function gTF(){
- const ws=wpool(90);let i=0,score=0,combo=0,left=60,cur,truth,shown,started=false;
+ const ws=wpool(90);if(ws.length<2)return needMore('✅ נכון או לא?',2);let i=0,score=0,combo=0,left=60,cur,truth,shown,started=false;
  view(`${ghead('✅ נכון או לא?')}<div class="g-hud"><span id="tm">⏱️ 60</span><span id="sc">0</span></div>
  <div class="card swipe" id="sw" style="text-align:center;padding:34px 12px"><div class="big en" id="w1"></div><div style="font-size:22px;margin:6px 0">=</div><div class="he-big" id="w2"></div></div>
  <div class="row" style="justify-content:center;margin-top:14px"><button class="btn primary" id="yes" style="min-width:130px;font-size:20px">✓ נכון</button><button class="btn accent" id="no" style="min-width:130px;font-size:20px">✗ לא נכון</button></div>
@@ -502,7 +511,7 @@ function gTF(){
 
 /* ---------------- 3. בלונים ---------------- */
 function gBalloons(){
- const ws=wpool(30,w=>w.en.length<=12);const N=10;let r=0,score=0,hits=0;
+ const ws=wpool(30,w=>w.en.length<=12);if(ws.length<2)return needMore('🎈 מפוצץ בלונים',2);const N=Math.min(10,ws.length);let r=0,score=0,hits=0;
  const COLORS=['#e8554e','#2f8fd8','#f2a93b','#16a34a','#9b59b6','#e67e22'];
  view(`${ghead('🎈 מפוצץ בלונים')}<div class="card stack" style="text-align:center"><div style="font-size:60px">🎈</div><p style="margin:0">טוקי אומר מילה באנגלית – מפוצצים את הבלון הנכון לפני שהוא עף!</p><button class="btn primary" id="go">התחל</button></div>`,'game');
  $('#go').onclick=()=>{unlockAudio();round();};
@@ -518,18 +527,21 @@ function gBalloons(){
   $('#again').onclick=()=>speak(t.en,true);later(()=>speak(t.en),300);};}
 
 /* ---------------- 4. Wordle ---------------- */
-function score5(g,a){const res=Array(5).fill('x'),cnt={};for(let i=0;i<5;i++){if(g[i]===a[i])res[i]='g';else cnt[a[i]]=(cnt[a[i]]||0)+1;}
- for(let i=0;i<5;i++){if(res[i]!=='g'&&cnt[g[i]]){res[i]='y';cnt[g[i]]--;}}return res;}
+function score5(g,a){const L=a.length,res=Array(L).fill('x'),cnt={};for(let i=0;i<L;i++){if(g[i]===a[i])res[i]='g';else cnt[a[i]]=(cnt[a[i]]||0)+1;}
+ for(let i=0;i<L;i++){if(res[i]!=='g'&&cnt[g[i]]){res[i]='y';cnt[g[i]]--;}}return res;}
 function gWordle(practice){
- const daily=[...EXTRA5_MAP().keys()].sort();let ans,guesses=[];
- if(practice){const all=new Set(daily);allWords().forEach(w=>{if(/^[a-z]{5}$/.test(w.en))all.add(w.en);});ans=pick([...all]);}
- else{ans=daily[hashStr('tuki'+dayKey())%daily.length];S.wordle=S.wordle&&S.wordle.d===dayKey()?S.wordle:{d:dayKey(),g:[],done:false};guesses=S.wordle.g.slice();}
+ let daily=[...EXTRA5_MAP().keys()].sort();let ans,guesses=[];
+ const sk=schoolKid();if(sk){daily=[...new Set(tWords().filter(w=>/^[a-z]{3,8}$/i.test(w.en)).map(w=>w.en.toLowerCase()))].sort();if(!daily.length)return needMore('🟩 Wordle',1);}
+ if(sk&&practice){ans=pick(daily);}
+ else if(practice){const all=new Set(daily);allWords().forEach(w=>{if(/^[a-z]{5}$/.test(w.en))all.add(w.en);});ans=pick([...all]);}
+ else{ans=daily[hashStr('tuki'+dayKey())%daily.length];S.wordle=S.wordle&&S.wordle.d===dayKey()&&S.wordle.a===ans?S.wordle:{d:dayKey(),a:ans,g:[],done:false};guesses=S.wordle.g.slice();}
+ const L=ans.length;
  let cur='',over=false;
  view(`${ghead(practice?'🟩 Wordle – תרגול':'🟩 Wordle יומי',`<span class="pill">${practice?'∞':dayKey().split('-').slice(1).reverse().join('/')}</span>`)}
- <p class="small muted" style="text-align:center;margin:0 0 8px">🟩 אות במקום הנכון · 🟨 האות במילה אבל במקום אחר · ⬛ האות לא במילה</p>
- <div class="wd" id="wd"></div><div id="wmsg" style="text-align:center;margin-top:10px"></div><div id="wkb">${kbHTML(true)}</div>`,'game');
+ <p class="small muted" style="text-align:center;margin:0 0 8px">🟩 אות במקום הנכון · 🟨 האות במילה אבל במקום אחר · ⬛ האות לא במילה</p>${sk?`<p style="text-align:center;margin:0 0 8px">מילה של ${L} אותיות · רמז: <b>${esc(heOf(ans))}</b></p>`:''}
+ <div class="wd" id="wd" style="max-width:${Math.min(380,58*L)}px"></div><div id="wmsg" style="text-align:center;margin-top:10px"></div><div id="wkb">${kbHTML(true)}</div>`,'game');
  const draw=()=>{const rows=[];for(let r=0;r<6;r++){const g=guesses[r];const sc=g?score5(g,ans):null;const txt=g||(r===guesses.length?cur:'');
-   rows.push(`<div class="r">${[0,1,2,3,4].map(c=>`<div class="c ${sc?sc[c]:''}">${esc(txt[c]||'')}</div>`).join('')}</div>`);}
+   rows.push(`<div class="r" style="grid-template-columns:repeat(${L},1fr)">${[...Array(L).keys()].map(c=>`<div class="c ${sc?sc[c]:''}">${esc(txt[c]||'')}</div>`).join('')}</div>`);}
   $('#wd').innerHTML=rows.join('');const st={};guesses.forEach(g=>score5(g,ans).forEach((s,i)=>{const l=g[i],o=st[l];if(s==='g'||(s==='y'&&o!=='g')||(!o))st[l]=s;}));
   $$('.kb button',$('#wkb')).forEach(b=>{const k=b.dataset.k;b.classList.remove('g','y','x');if(st[k])b.classList.add(st[k]);});};
  const finish=(win)=>{over=true;const he=heOf(ans);
@@ -537,16 +549,16 @@ function gWordle(practice){
   <div class="row" style="justify-content:center">${practice?'':'<span class="small muted">מילה חדשה מחר! 🦜</span>'}<button class="btn primary" id="wnext">${practice?'🔁 עוד מילה':'🟩 מצב תרגול'}</button><button class="btn ghost" onclick="open_('games')">🎮 משחקים</button></div></div>`;
   $('#wnext').onclick=()=>gWordle(true);$('#wkb').innerHTML='';speak(ans);};
  const award=(win)=>{const xp=win?Math.max(10,34-guesses.length*4):5;addXP(xp);wk().games++;S.gbest=S.gbest||{};if(win){const sc=7-guesses.length;if(sc>(S.gbest['g-wordle']||0))S.gbest['g-wordle']=sc;}save();toast(`+${xp} XP`);};
- const key=k=>{if(over)return;if(k==='del'){cur=cur.slice(0,-1);}else if(k==='enter'){if(cur.length<5){$('#wd').classList.add('shake');later(()=>$('#wd').classList.remove('shake'),400);toast('צריך 5 אותיות');return;}
+ const key=k=>{if(over)return;if(k==='del'){cur=cur.slice(0,-1);}else if(k==='enter'){if(cur.length<L){$('#wd').classList.add('shake');later(()=>$('#wd').classList.remove('shake'),400);toast('צריך '+L+' אותיות');return;}
    guesses.push(cur);cur='';if(!practice){S.wordle.g=guesses.slice();save();}const win=guesses[guesses.length-1]===ans;draw();
    if(win||guesses.length>=6){if(!practice){S.wordle.done=true;S.wordle.win=win;}award(win);finish(win);}return;}
-  else if(cur.length<5&&/^[a-z]$/.test(k))cur+=k;draw();};
+  else if(cur.length<L&&/^[a-z]$/.test(k))cur+=k;draw();};
  kbBind(document,key);draw();
  if(!practice&&S.wordle.done){finish(!!S.wordle.win);}}
 
 /* ---------------- 5. איש תלוי ---------------- */
 function gHang(){
- const ws=wpool(5,w=>only(w)&&w.en.length>=4&&w.en.length<=10);let r=0,score=0,solved=0;
+ const ws=wpool(5,w=>only(w)&&w.en.length>=3&&w.en.length<=12);if(!ws.length)return needMore('🪶 איש תלוי',1);let r=0,score=0,solved=0;
  const round=()=>{if(r>=ws.length)return gameEnd('g-hang','🪶 איש תלוי',score,`פתרת ${solved} מתוך ${ws.length} מילים`,score/2);
   const w=ws[r++],word=w.en.toLowerCase();const got=new Set();let wrong=0,over=false;
   view(`${ghead('🪶 איש תלוי',`<span class="pill">${r}/${ws.length}</span>`)}<div class="card" style="text-align:center">
@@ -570,6 +582,7 @@ function gSearch(){
   for(let t=0;t<120;t++){const [dr,dc]=pick(dirs);const r0=Math.floor(Math.random()*N),c0=Math.floor(Math.random()*N);const re=r0+dr*(s.length-1),ce=c0+dc*(s.length-1);
    if(re<0||re>=N||ce<0||ce>=N)continue;let ok=true;for(let k=0;k<s.length;k++){const g=grid[(r0+dr*k)*N+c0+dc*k];if(g&&g!==s[k]){ok=false;break;}}
    if(!ok)continue;const cells=[];for(let k=0;k<s.length;k++){const id=(r0+dr*k)*N+c0+dc*k;grid[id]=s[k];cells.push(id);}placed.push({w,cells,found:false});break;}}
+ if(placed.length<2)return needMore('🔎 תפזורת',2);
  const AB='abcdefghijklmnopqrstuvwxyz';for(let i=0;i<grid.length;i++)if(!grid[i])grid[i]=AB[Math.floor(Math.random()*26)];
  let sel=null,t0=Date.now();
  view(`${ghead('🔎 תפזורת',`<span class="pill" id="tm">0:00</span>`)}<p class="small muted" style="margin:0 0 8px;text-align:center">לוחצים על האות הראשונה ואז על האחרונה של המילה</p>
@@ -592,7 +605,7 @@ function gSearch(){
 
 /* ---------------- 7. מילים מבולגנות ---------------- */
 function gScramble(){
- const ws=wpool(8,w=>only(w)&&w.en.length>=3&&w.en.length<=9);let r=0,score=0,solved=0;
+ const ws=wpool(8,w=>only(w)&&w.en.length>=3&&w.en.length<=12);if(!ws.length)return needMore('🔀 מילים מבולגנות',1);let r=0,score=0,solved=0;
  const round=()=>{if(r>=ws.length)return gameEnd('g-scr','🔀 מילים מבולגנות',score,`סידרת ${solved} מתוך ${ws.length} מילים`,score/2);
   const w=ws[r++],word=w.en.toLowerCase();let letters;do{letters=shuffle([...word]);}while(letters.join('')===word&&word.length>1&&new Set(word).size>1);
   let built=[],hints=0,over=false;
@@ -614,14 +627,17 @@ function gScramble(){
 
 /* ---------------- 8. בונים משפט ---------------- */
 function gSentence(){
+ if(schoolKid()){const ex=wpool(40).filter(w=>w.ex&&w.ex.split(' ').length>=3&&w.ex.split(' ').length<=12);if(!ex.length)return needMore('🧱 בונים משפט',1);
+  return sentenceGame(shuffle(ex).slice(0,6).map(w=>({en:[w.ex],he:[`בנו משפט עם המילה <b class="en">${esc(w.en)}</b> (${esc(w.he)})`],raw:true})));}
  const li=lvlIdx(S.level);let pool=transPool().filter(t=>lvlIdx(t.lvl)<=li+0&&t.en&&t.en[0]&&t.en[0].split(' ').length>=3&&t.en[0].split(' ').length<=11);
  if(pool.length<6)pool=transPool().filter(t=>t.en&&t.en[0]&&t.en[0].split(' ').length<=11);
- const items=shuffle(pool).slice(0,6);let r=0,score=0,good=0;
+ return sentenceGame(shuffle(pool).slice(0,6));}
+function sentenceGame(items){let r=0,score=0,good=0;
  const round=()=>{if(r>=items.length)return gameEnd('g-sent','🧱 בונים משפט',score,`בנית נכון ${good} מתוך ${items.length} משפטים`,score/2);
   const it=items[r++];const target=it.en[0];const toks=target.replace(/[.?!,]/g,'').split(' ').filter(Boolean);let order;do{order=shuffle(toks.map((_,k)=>k));}while(toks.length>1&&order.every((v,k)=>v===k));
   let built=[],over=false;
   view(`${ghead('🧱 בונים משפט',`<span class="pill">${r}/${items.length} · ${score}</span>`)}<div class="card stack" style="text-align:center">
-  <div style="font-size:20px;font-weight:600">${esc(it.he[0])}</div><div class="tiles built" id="bt"></div><div class="tiles" id="tl"></div><div id="sm"></div></div>`,'game');
+  <div style="font-size:20px;font-weight:600">${it.raw?it.he[0]:esc(it.he[0])}</div><div class="tiles built" id="bt"></div><div class="tiles" id="tl"></div><div id="sm"></div></div>`,'game');
   const draw=()=>{$('#bt').innerHTML=built.map((k,j)=>`<button class="tile" data-j="${j}" style="font-size:17px">${esc(toks[k])}</button>`).join('')||'<span class="muted small">לחצו על המילים לפי הסדר</span>';
    $('#tl').innerHTML=order.map(k=>`<button class="tile ${built.includes(k)?'used':''}" data-k="${k}" style="font-size:17px">${esc(toks[k])}</button>`).join('');
    $$('#tl .tile').forEach(b=>b.onclick=()=>{if(over)return;built.push(+b.dataset.k);draw();if(built.length===toks.length)check();});
@@ -635,7 +651,7 @@ function gSentence(){
 
 /* ---------------- 9. זוגות ---------------- */
 function gMemory(){
- const ws=wpool(6,w=>w.he.length<=18&&w.en.length<=14);const cards=shuffle(ws.flatMap(w=>[{w,s:'en'},{w,s:'he'}]));let up=[],moves=0,pairs=0,lock=false;const t0=Date.now();
+ const ws=wpool(6,w=>w.he.length<=24&&w.en.length<=18);if(ws.length<3)return needMore('🃏 זוגות',3);const cards=shuffle(ws.flatMap(w=>[{w,s:'en'},{w,s:'he'}]));let up=[],moves=0,pairs=0,lock=false;const t0=Date.now();
  view(`${ghead('🃏 זוגות',`<span class="pill" id="mv">0 מהלכים</span>`)}<p class="small muted" style="text-align:center;margin:0 0 10px">מצאו כל מילה באנגלית ואת התרגום שלה</p>
  <div class="mem">${cards.map((c,i)=>`<button class="c3 ${c.s==='en'?'en':''}" data-i="${i}">${esc(c.w[c.s])}</button>`).join('')}</div>`,'game');
  $$('.c3').forEach(b=>b.onclick=()=>{if(lock||b.classList.contains('up')||b.classList.contains('ok'))return;b.classList.add('up');const c=cards[+b.dataset.i];if(c.s==='en')speak(c.w.en);up.push(b);
@@ -646,9 +662,9 @@ function gMemory(){
 
 /* ---------------- 10. מה חסר ---------------- */
 function gMissing(){
- const big=wpool(60);let r=0,score=0,good=0;const N=6;
+ const big=wpool(60);if(big.length<6)return needMore('👀 מה חסר?',6);let r=0,score=0,good=0;const N=6;
  const round=()=>{if(r>=N)return gameEnd('g-miss','👀 מה חסר?',score,`זכרת נכון ${good} מתוך ${N}`,score/2);
-  const size=4+Math.floor(r/2);const set=shuffle(big).slice(0,size);const miss=pick(set);r++;let sec=Math.max(4,size);
+  const size=Math.min(4+Math.floor(r/2),big.length-3);const set=shuffle(big).slice(0,size);const miss=pick(set);r++;let sec=Math.max(4,size);
   view(`${ghead('👀 מה חסר?',`<span class="pill">${r}/${N}</span>`)}<div class="card stack"><div style="text-align:center;font-weight:700">זכרו את המילים! <span id="cd">${sec}</span></div>
   <div class="grid" style="grid-template-columns:repeat(auto-fill,minmax(140px,1fr))">${set.map(w=>`<div class="card" style="padding:10px;text-align:center"><b class="en">${esc(w.en)}</b><div class="small">${esc(w.he)}</div></div>`).join('')}</div></div>`,'game');
   const iv=every(()=>{sec--;const c=$('#cd');if(c)c.textContent=sec;if(sec<=0){clearInterval(iv);ask();}},1000);
@@ -661,7 +677,9 @@ function gMissing(){
 /* ---------------- 11. אמור את זה ---------------- */
 function gSay(){
  if(!dictCap){view(`${ghead('🗣️ אמור את זה!')}<div class="card stack"><p>המשחק הזה צריך מיקרופון, וזיהוי דיבור לא זמין כאן.</p><p class="muted small">${isApp?'באפליקציה נוסיף מיקרופון בשלב הבא.':'נסו לפתוח את Tuki ב-Safari או ב-Chrome.'}</p><button class="btn primary" onclick="open_('games')">חזרה למשחקים</button></div>`,'game');return;}
- const items=shuffle(EMOJI).slice(0,8);let r=0,score=0,good=0;
+ let items=shuffle(EMOJI).slice(0,8);
+ if(schoolKid()){const tw=wpool(8);if(!tw.length)return needMore('🗣️ אמור את זה!',1);items=tw.map(w=>{const e=EMOJI.find(x=>x[0]===w.en.toLowerCase());return[w.en,w.he,e?e[2]:'🗣️'];});}
+ let r=0,score=0,good=0;
  const round=()=>{if(r>=items.length)return gameEnd('g-say','🗣️ אמור את זה!',score,`אמרת נכון ${good} מתוך ${items.length}`,score/2);
   const [en,he,em]=items[r++];let tries=0,over=false;
   view(`${ghead('🗣️ אמור את זה!',`<span class="pill">${r}/${items.length} · ${score}</span>`)}<div class="card stack" style="text-align:center"><div class="emo">${em}</div><div class="he-big">${esc(he)}</div>
@@ -707,7 +725,8 @@ const ROOM_ERR={no_room:'לא מצאתי משחק עם הקוד הזה',no_kv:'�
 const TERR='קוד המורה לא נכון – בדקו בהגדרות ← אני מורה';ROOM_ERR.bad_tcode=TERR;try{CLASS_ERR.bad_tcode=TERR;}catch(e){}
 const roomErr=e=>toast(ROOM_ERR[e&&e.code]||'משהו השתבש, נסו שוב');
 function myName(){return S.myName||(S.cls&&S.cls.me)||'';}
-function roomQs(seed,lvl,n){const r=rng(seed);let pool=WORDS.filter(w=>w.lvl===lvl&&only(w));if(pool.length<20)pool=WORDS.filter(only);
+function roomQs(seed,lvl,n,words){const r=rng(seed);let pool=WORDS.filter(w=>w.lvl===lvl&&only(w));if(pool.length<20)pool=WORDS.filter(only);
+ if(Array.isArray(words)&&words.length>=4)pool=words.filter(w=>w&&w.en&&w.he).slice().sort((a,b)=>a.en<b.en?-1:1);
  const pick4=sshuffle(pool,r);const qs=[];for(let i=0;i<n&&i<pick4.length;i++){const w=pick4[i];const others=sshuffle(pool.filter(x=>x.he!==w.he&&x.en!==w.en),r).slice(0,3);
   const opts=sshuffle([w,...others],r);qs.push({w,opts,right:opts.indexOf(w)});}return qs;}
 function shareRoom(code,kind){const url=SITE+'#room='+code;const txt=kind==='quiz'?`🎯 חידון Tuki! היכנסו והקלידו את הקוד ${code}\n${url}`:`⚔️ מזמין/ה אותך לדו־קרב אנגלית ב-Tuki! הקוד: ${code}\n${url}`;
@@ -720,7 +739,7 @@ function roomHome(code){
  <div class="card stack"><h3>יש לך קוד?</h3><div class="row"><input class="inp en" id="cd" placeholder="קוד" value="${esc(code||'')}" style="flex:1;text-transform:uppercase;min-width:110px"><input class="inp" id="nm2" placeholder="השם שלך" value="${esc(myName())}" style="flex:1;min-width:110px"></div><button class="btn accent" id="jn">הצטרפות למשחק</button></div>
  <p class="small muted">קיבלתם קוד לחידון כיתתי מהמורה? מקלידים אותו כאן ב"יש לך קוד?".</p></div>`,'room');
  $('#cr').onclick=async()=>{const name=$('#nm').value.trim();if(!name)return toast('כתבו את השם שלכם');S.myName=name;save();const b=$('#cr');b.disabled=true;b.innerHTML='<span class="loader"></span>';
-  try{const r=await api('/room/create',{name,lvl:S.level,n:10,kind:'duel'});await roomJoin(r.code,name,true);}catch(e){roomErr(e);b.disabled=false;b.textContent='⚔️ צור דו־קרב';}};
+  try{const tw=schoolKid()?tWords().slice(0,60).map(w=>({en:w.en,he:w.he})):null;const r=await api('/room/create',{name,lvl:S.level,n:Math.min(10,tw&&tw.length>=4?tw.length:10),kind:'duel',words:tw&&tw.length>=4?tw:undefined});await roomJoin(r.code,name,true);}catch(e){roomErr(e);b.disabled=false;b.textContent='⚔️ צור דו־קרב';}};
  $('#jn').onclick=async()=>{const c=$('#cd').value.trim().toUpperCase(),name=$('#nm2').value.trim();if(!c||!name)return toast('צריך קוד ושם');S.myName=name;save();const b=$('#jn');b.disabled=true;b.innerHTML='<span class="loader"></span>';
   try{await roomJoin(c,name,false);}catch(e){roomErr(e);b.disabled=false;b.textContent='הצטרפות למשחק';}};}
 async function roomJoin(code,name,host){
@@ -730,7 +749,7 @@ async function roomJoin(code,name,host){
  <button class="btn primary" id="go" style="font-size:20px">▶️ ${host?'אני מתחיל/ה לשחק':'מתחילים!'}</button></div>`,'room');
  $('#go').onclick=()=>{unlockAudio();roomPlay(RM);};}
 function roomPlay(RM){
- const qs=roomQs(RM.room.seed,RM.room.lvl,RM.room.n);let i=0,score=0,correct=0;
+ const qs=roomQs(RM.room.seed,RM.room.lvl,RM.room.n,RM.room.words);let i=0,score=0,correct=0;
  const q=()=>{if(i>=qs.length)return roomSubmit(RM,score,correct,qs.length);const Q=qs[i++];let left=15,done=false;
   view(`<div class="ses-head"><span class="pill">${i}/${qs.length}</span><div class="bar"><i style="width:${(i-1)/qs.length*100}%"></i></div><span class="pill">${score}</span></div>
   <div class="card"><div class="tbar"><i id="tb" style="width:100%"></i></div><div class="prompt"><span class="big en">${esc(Q.w.en)}</span></div>
@@ -754,9 +773,13 @@ function quizHost(){
  <div class="card stack"><p style="margin:0">פותחים חידון, מקרינים את הקוד על הלוח, והתלמידים נכנסים ב-Tuki: 🎮 משחקים ← ⚔️ דו־קרב ← "יש לך קוד?".</p>
  <label class="set">רמת השאלות<select class="inp" id="ql">${LEVELS.map(l=>`<option ${l===S.level?'selected':''}>${l}</option>`).join('')}</select></label>
  <label class="set">מספר שאלות<select class="inp" id="qn"><option>10</option><option>15</option><option>20</option></select></label>
+ ${(S.teach||[]).length?`<label class="set">על אילו מילים?<select class="inp" id="qcls"><option value="">מילים כלליות לפי רמה</option>${S.teach.map(c=>`<option value="${esc(c.code)}">${esc(c.name)} – כל בנק המילים</option>`).join('')}</select></label><select class="inp" id="qlist" hidden></select>`:''}
  <input class="inp" id="qt" placeholder="שם החידון, למשל: ז׳2 – חזרה" value="${esc((S.teach&&S.teach[0]&&S.teach[0].name)||'')}"><button class="btn primary" id="qc">🎯 פתיחת חידון</button></div></div>`,'quiz');
+ let QL=[];const qc=$('#qcls');if(qc)qc.onchange=async()=>{const sel=$('#qlist');QL=[];sel.hidden=true;if(!qc.value)return;const c=S.teach.find(x=>x.code===qc.value);
+  try{const r=await api('/class/view',{code:c.code,key:c.key});QL=r.lists||[];sel.innerHTML=`<option value="*">כל הרשימות (${QL.reduce((a,l)=>a+l.words.length,0)} מילים)</option>`+QL.map(l=>`<option value="${esc(l.id)}">${esc(l.name)} (${l.words.length} מילים)</option>`).join('');sel.hidden=false;}catch(e){classErr(e);}};
  $('#qc').onclick=async()=>{const b=$('#qc');b.disabled=true;b.innerHTML='<span class="loader"></span>';
-  try{const r=await api('/room/create',{name:$('#qt').value.trim()||'Quiz',lvl:$('#ql').value,n:+$('#qn').value,kind:'quiz'});quizBoard(r.code);}catch(e){roomErr(e);b.disabled=false;b.textContent='🎯 פתיחת חידון';}};}
+  let words;const sel=$('#qlist');if(sel&&!sel.hidden){const src=sel.value==='*'?QL:QL.filter(l=>l.id===sel.value);const m=new Map();src.forEach(l=>l.words.forEach(w=>{if(!m.has(w.en))m.set(w.en,{en:w.en,he:w.he});}));words=[...m.values()].slice(0,60);if(words.length<4){toast('צריך לפחות 4 מילים ברשימה');b.disabled=false;b.textContent='🎯 פתיחת חידון';return;}}
+  try{const r=await api('/room/create',{name:$('#qt').value.trim()||'Quiz',lvl:$('#ql').value,n:words?Math.min(+$('#qn').value,words.length):+$('#qn').value,kind:'quiz',words});quizBoard(r.code);}catch(e){roomErr(e);b.disabled=false;b.textContent='🎯 פתיחת חידון';}};}
 function quizBoard(code){
  view(`<div class="card stack" style="text-align:center"><div class="small muted">היכנסו ל-Tuki ← 🎮 משחקים ← ⚔️ דו־קרב, והקלידו:</div><div class="big-code" style="font-size:72px">${esc(code)}</div>
  <div class="row" style="justify-content:center"><button class="btn ghost" onclick="tkShareRoom('${esc(code)}','quiz')">📤 שיתוף קישור</button><button class="btn ghost" id="rf">🔄 רענון</button></div>
@@ -1023,6 +1046,46 @@ async function tlStats(code,id){
  $('#tsb').onclick=()=>openClass(code);}
 
 
+
+/* ===================================================================
+   🔊 קול ברור ואיטי יותר
+   הקול הטבעי מושמע עכשיו דרך נגן שמאט בלי לעוות את הצליל (שומר על גובה הקול),
+   ומהירות ההקראה מההגדרות חלה גם עליו.
+   =================================================================== */
+const AEL=typeof Audio!=='undefined'?new Audio():null;let aelOk=false,myTok=0;
+const EMPTY_WAV='data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEARKwAAIhYAQACABAAZGF0YQAAAAA=';
+function aelUnlock(){if(!AEL||aelOk)return;aelOk=true;try{AEL.muted=true;AEL.src=EMPTY_WAV;const p=AEL.play();if(p&&p.then)p.then(()=>{AEL.pause();AEL.muted=false;},()=>{AEL.muted=false;aelOk=false;});else AEL.muted=false;}catch(e){AEL.muted=false;aelOk=false;}}
+addEventListener('pointerdown',aelUnlock,true);addEventListener('touchend',aelUnlock,true);addEventListener('keydown',aelUnlock,true);
+const blobs=new Map();
+function ttsURL(text){const ck=(S.settings.speaker||'luna')+'|'+text;if(blobs.has(ck))return blobs.get(ck);
+ const p=withTimeout(fetch(PROXY_URL+'/tts?v='+encodeURIComponent(S.settings.speaker||'luna')+'&t='+encodeURIComponent(text)),10000).then(r=>{if(!r.ok)throw new Error('tts');return r.blob();}).then(b=>URL.createObjectURL(b));
+ blobs.set(ck,p);p.catch(()=>blobs.delete(ck));return p;}
+/* מילה בודדת מקבלת נקודה בסוף – כך היא נאמרת שלמה וברורה, בלי להיבלע */
+const clearText=t=>{t=String(t).trim();return /^[A-Za-z][A-Za-z' -]{0,30}$/.test(t)?t+'.':t;};
+function rateFor(slow){const r=+S.settings.rate||1;return slow?Math.max(0.55,Math.round(r*0.72*100)/100):r;}
+const _speakOrig=speak,_stopOrig=stopSpeak;
+window.speak=function(text,slow,onend){
+ if(!text){onend&&onend();return;}
+ if(!AEL||!naturalOn())return _speakOrig(text,slow,onend);
+ const t=++myTok;const say=clearText(text);
+ ttsURL(say).then(url=>{if(t!==myTok)return;_stopOrig(true);
+  let done=false;const fin=()=>{if(done)return;done=true;onend&&onend();};
+  try{AEL.pause();}catch(e){}
+  AEL.onended=fin;AEL.onerror=()=>{if(t===myTok&&!done){done=true;_speakOrig(text,slow,onend);}};
+  AEL.preservesPitch=true;AEL.webkitPreservesPitch=true;AEL.mozPreservesPitch=true;
+  const rate=rateFor(slow);AEL.defaultPlaybackRate=rate;AEL.src=url;AEL.playbackRate=rate;
+  const p=AEL.play();if(p&&p.catch)p.catch(()=>{if(t===myTok&&!done){done=true;_speakOrig(text,slow,onend);}});})
+ .catch(()=>{if(t===myTok)_speakOrig(text,slow,onend);});};
+window.stopSpeak=function(keep){myTok++;try{if(AEL){AEL.onended=null;AEL.pause();}}catch(e){}return _stopOrig(keep);};
+window.prefetchTTS=function(t){if(AEL&&naturalOn()&&t)ttsURL(clearText(t)).catch(()=>{});};
+/* ברירת מחדל: הקראה קצת איטית לתלמידים (אפשר לשנות בהגדרות) */
+if(!S.settings.rateSet){S.settings.rate=0.85;S.settings.rateSet=true;save();}
+const _settings3=window.settingsView;
+window.settingsView=function(){_settings3();const sr=$('#sr');if(!sr)return;
+ const opts=[[0.7,'🐢 איטי מאוד'],[0.8,'איטי'],[0.85,'קצת איטי (מומלץ)'],[1,'רגיל'],[1.15,'מהיר']];
+ sr.innerHTML=opts.map(([v,l])=>`<option value="${v}" ${(+S.settings.rate)===v?'selected':''}>${l}</option>`).join('');
+ sr.onchange=e=>{S.settings.rate=+e.target.value;S.settings.rateSet=true;save();speak('Hello! This is how I sound.');};};
+
 /* ===================================================================
    🏫 מצב בית ספר – כניסה עם קוד, ורק התוכן של המורה
    (כל שאר התרגולים מוסתרים מהמסכים אבל לא נמחקו מהקוד)
@@ -1063,6 +1126,7 @@ function studentHome(){
  view(`<div class="stack">
  <div class="card hero"><div class="hero-row"><img src="${LOGO}" alt="" style="width:64px;height:64px;border-radius:18px"><div style="flex:1"><h2 style="margin:0;color:#fff">שלום ${esc(S.cls.me||'')}! 👋</h2><div class="muted">כיתה ${esc(S.cls.name||'')} · ${all.length} מילים בבנק המילים</div></div></div></div>
  ${S.cls.message?`<div class="note">📣 <b>מהמורה:</b> ${esc(S.cls.message)}</div>`:''}
+ ${all.length>=2?`<button class="mod" style="min-height:auto;width:100%" onclick="open_('games')"><span class="ic">🎮</span><span class="t">משחקים</span><span class="d">Wordle, איש תלוי, זוגות ועוד – עם המילים שלך</span></button>`:''}
  ${all.length?`<button class="mod" id="drev" style="min-height:auto;width:100%"><span class="ic">🔁</span><span class="t">חזרה יומית</span><span class="d">${due.length?`${due.length} מילים מחכות לחזרה`:'אין מילים לחזרה היום ✅ – אפשר לחזור על הכול'}</span></button>`:''}
  <h3 style="margin:6px 0 0">📚 השיעורים שלי</h3>
  ${ts.length?ts.map((t,k)=>{const r=examReady(t),d=daysLeft(t.date);return`<button class="mod" style="min-height:88px;width:100%" data-ex="${t.id}"><div class="row" style="width:100%"><span class="t">${esc(t.name.replace(/^👩‍🏫\s*/,''))}${k===0?' <span class="pill" style="font-size:12px">חדש</span>':''}</span><span class="pill" style="margin-inline-start:auto">${t.words.length} מילים</span></div>
