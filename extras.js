@@ -362,15 +362,23 @@ function insertAfter(id,arr){const i=MODULES.findIndex(m=>m.id===id);arr.forEach
 insertAfter('daily',NEWMODS.afterDaily);insertAfter('shadow',NEWMODS.afterShadow);insertAfter('topic',NEWMODS.afterTopic);
 MORE_SCEN.forEach(s=>{if(!SCENARIOS.find(x=>x.id===s.id))SCENARIOS.push(s);});
 
+/* ---------------- מצב מורה (מוסתר מתלמידים) ---------------- */
+if(S.tmode===undefined&&S.teach&&S.teach.length){S.tmode=true;}
+const tmode=()=>!!S.tmode;
+const _api=api;
+window.api=function(path,body){if(path==='/class/create'||path==='/room/create')body=Object.assign({},body,{tcode:S.tcode||''});return _api(path,body);};
+function teacherGate(){view(`<div class="card stack"><h2>👩‍🏫 אזור מורים</h2><p style="margin:0">האזור הזה מיועד למורים בלבד. אם את/ה מורה, היכנסו ל-⚙️ הגדרות ← "אני מורה" והקלידו את קוד המורה.</p><div class="row"><button class="btn primary" onclick="open_('settings')">⚙️ להגדרות</button><button class="btn ghost" onclick="home()">חזרה לבית</button></div></div>`,'gate');}
+
 const ROUTES={games:gamesHub,pet:petView,challenge:challengeView,camera:cameraView,aistory:aiStoryView,idioms:idiomsView,gram:gramView,pron:pronView,
  voicechat:voiceChat,report:reportView,duel:roomHome,
  'g-rain':gRain,'g-tf':gTF,'g-bal':gBalloons,'g-wordle':()=>gWordle(false),'g-wordle2':()=>gWordle(true),'g-hang':gHang,'g-search':gSearch,'g-scr':gScramble,'g-sent':gSentence,'g-mem':gMemory,'g-miss':gMissing,'g-say':gSay,'g-chain':gChain,'g-duel':roomHome,'g-quiz':quizHost};
 const _open=open_;
-window.open_=function(id){if(ROUTES[id])return ROUTES[id]();return _open(id);};
+window.open_=function(id){if((id==='teacher'||id==='g-quiz')&&!tmode())return teacherGate();if(ROUTES[id])return ROUTES[id]();return _open(id);};
 
 /* דף הבית: הודעות על תעודה ואתגר */
 const _home=home;
-window.home=function(){_home();if(currentView!=='home')return;const hero=$('#app .hero');if(!hero)return;let h='';
+window.home=function(){_home();if(currentView!=='home')return;if(!tmode())$$('#app .mod').forEach(b=>{if(/open_\('teacher'\)/.test(b.getAttribute('onclick')||''))b.remove();});
+ const hero=$('#app .hero');if(!hero)return;let h='';
  if(S.certNew)h+=`<button class="note" style="text-align:start;width:100%" onclick="tkCert('${S.certNew}')">🎓 <b>כל הכבוד! סיימת את רמה ${S.certNew}.</b> לחצו לקבלת תעודה ←</button>`;
  if(S.path&&S.path.n>PATH_LEN&&!(S.certs&&S.certs.path))h+=`<button class="note" style="text-align:start;width:100%" onclick="tkCert('path')">🏆 <b>סיימת את כל המסלול!</b> לחצו לקבלת תעודה ←</button>`;
  const c=curChallenge();if(c.v()>=c.goal&&!wk().claimed)h+=`<button class="note" style="text-align:start;width:100%" onclick="open_('challenge')">🏆 <b>השלמת את האתגר השבועי!</b> לחצו לאסוף 150 🪙</button>`;
@@ -385,6 +393,13 @@ window.settingsView=function(){_settings();const first=$('#app .card');if(!first
  <label class="set">⏰ תזכורת יומית<span class="row"><input type="time" class="inp" id="xtime" value="${esc(R.time||'19:00')}" style="width:auto;font-size:15px;padding:6px 10px"><input type="checkbox" id="xrem" ${R.on?'checked':''}></span></label>
  <div class="small muted" id="xremnote">${isApp?'':'התזכורת היומית פועלת באפליקציה המותקנת בטלפון.'}</div>
  <div class="row" style="padding-top:12px"><button class="btn ghost" onclick="open_('report')">📤 דוח שבועי להורה / למורה</button></div></div>`);
+ const last=$$('#app .card');const tcard=`<div class="card stack" id="tcard"><h3>👩‍🏫 אני מורה</h3>${tmode()?`<p style="margin:0">✅ מצב מורה פעיל. לוח המורה מופיע בדף הבית.</p><div class="row"><button class="btn primary" onclick="open_('teacher')">👩‍🏫 ללוח המורה</button><button class="btn ghost" id="toff">כיבוי מצב מורה</button></div>`:
+  `<p class="small" style="margin:0">מורים מקבלים קוד מורה. אחרי שמקלידים אותו, מופיעים לוח המורה והחידון הכיתתי.</p><div class="row"><input class="inp en" id="tcode" placeholder="קוד מורה" style="flex:1;min-width:140px;text-transform:uppercase" autocomplete="off"><button class="btn primary" id="ton">כניסה</button></div><span class="small" id="tres"></span>`}</div>`;
+ (last[last.length-1]||first).insertAdjacentHTML('afterend',tcard);
+ const ton=$('#ton');if(ton)ton.onclick=async()=>{const c=$('#tcode').value.trim().toUpperCase();if(!c)return;ton.disabled=true;ton.innerHTML='<span class="loader"></span>';
+  try{await _api('/teacher/check',{tcode:c});S.tcode=c;S.tmode=true;save();toast('✅ מצב מורה הופעל');settingsView();}
+  catch(e){$('#tres').innerHTML='<span style="color:var(--bad)">❌ '+(e&&e.code==='bad_tcode'?'הקוד לא נכון':e&&e.code==='bad_prompt'?'צריך לעדכן את השרת (worker.js)':'אין חיבור לשרת')+'</span>';ton.disabled=false;ton.textContent='כניסה';}};
+ const toff=$('#toff');if(toff)toff.onclick=()=>{S.tmode=false;save();toast('מצב מורה כובה');settingsView();};
  $('#xtheme').onchange=e=>{S.settings.theme=e.target.value;save();applyTheme();};
  $('#xhap').onchange=e=>{S.settings.haptics=e.target.checked;save();if(e.target.checked)buzz('good');};
  const upd=async()=>{S.settings.remind={on:$('#xrem').checked,time:$('#xtime').value||'19:00'};save();
@@ -425,7 +440,7 @@ function gamesHub(){
  const b=S.gbest||{};
  view(`<div class="stack"><div class="ses-head">${back()}<h2 style="margin:0">🎮 משחקים</h2></div>
  <p class="muted" style="margin-top:-6px">כל משחק נותן XP ומטבעות 🪙, ומשתמש במילים שאת/ה צריכים לחזור עליהן.</p>
- <div class="grid">${GAMES.map(([id,ic,t,d])=>`<button class="mod gcard" onclick="open_('${id}')"><span class="ic">${ic}</span><span class="t">${t}</span><span class="d">${d}</span>${b[id]?`<span class="best pill">🏅 ${b[id]}</span>`:''}</button>`).join('')}</div></div>`,'games');}
+ <div class="grid">${GAMES.filter(g=>g[0]!=='g-quiz'||tmode()).map(([id,ic,t,d])=>`<button class="mod gcard" onclick="open_('${id}')"><span class="ic">${ic}</span><span class="t">${t}</span><span class="d">${d}</span>${b[id]?`<span class="best pill">🏅 ${b[id]}</span>`:''}</button>`).join('')}</div></div>`,'games');}
 function gameEnd(id,title,score,line,xp){
  xp=Math.max(5,Math.round(xp));addXP(xp);wk().games++;S.gbest=S.gbest||{};const nb=score>(S.gbest[id]||0);if(nb)S.gbest[id]=score;save();buzz('good');
  view(`<div class="card stack" style="text-align:center"><div style="font-size:54px">${xp>=30?'🏆':'🎉'}</div><h1>${title}</h1>
@@ -680,6 +695,7 @@ function gChain(){
 
 /* ---------------- 13+14. דו־קרב וחידון כיתתי ---------------- */
 const ROOM_ERR={no_room:'לא מצאתי משחק עם הקוד הזה',no_kv:'השרת עוד לא הוגדר',no_name:'צריך לכתוב שם',network:'אין חיבור לאינטרנט',no_server:'אין חיבור לשרת',not_found:'צריך לעדכן את השרת (worker.js)',bad_prompt:'צריך לעדכן את השרת (worker.js)'};
+const TERR='קוד המורה לא נכון – בדקו בהגדרות ← אני מורה';ROOM_ERR.bad_tcode=TERR;try{CLASS_ERR.bad_tcode=TERR;}catch(e){}
 const roomErr=e=>toast(ROOM_ERR[e&&e.code]||'משהו השתבש, נסו שוב');
 function myName(){return S.myName||(S.cls&&S.cls.me)||'';}
 function roomQs(seed,lvl,n){const r=rng(seed);let pool=WORDS.filter(w=>w.lvl===lvl&&only(w));if(pool.length<20)pool=WORDS.filter(only);
@@ -693,7 +709,7 @@ function roomHome(code){
  <div class="card stack"><h3>יצירת דו־קרב</h3><p class="small muted" style="margin:0">10 שאלות, 15 שניות לכל אחת. שולחים לחבר את הקוד, וכל אחד משחק מהטלפון שלו.</p>
  <input class="inp" id="nm" placeholder="השם שלך" value="${esc(myName())}"><button class="btn primary" id="cr">⚔️ צור דו־קרב</button></div>
  <div class="card stack"><h3>יש לך קוד?</h3><div class="row"><input class="inp en" id="cd" placeholder="קוד" value="${esc(code||'')}" style="flex:1;text-transform:uppercase;min-width:110px"><input class="inp" id="nm2" placeholder="השם שלך" value="${esc(myName())}" style="flex:1;min-width:110px"></div><button class="btn accent" id="jn">הצטרפות למשחק</button></div>
- <p class="small muted">גם מורים יכולים לפתוח חידון כיתתי מלוח המורה, והתלמידים מצטרפים כאן עם הקוד.</p></div>`,'room');
+ <p class="small muted">קיבלתם קוד לחידון כיתתי מהמורה? מקלידים אותו כאן ב"יש לך קוד?".</p></div>`,'room');
  $('#cr').onclick=async()=>{const name=$('#nm').value.trim();if(!name)return toast('כתבו את השם שלכם');S.myName=name;save();const b=$('#cr');b.disabled=true;b.innerHTML='<span class="loader"></span>';
   try{const r=await api('/room/create',{name,lvl:S.level,n:10,kind:'duel'});await roomJoin(r.code,name,true);}catch(e){roomErr(e);b.disabled=false;b.textContent='⚔️ צור דו־קרב';}};
  $('#jn').onclick=async()=>{const c=$('#cd').value.trim().toUpperCase(),name=$('#nm2').value.trim();if(!c||!name)return toast('צריך קוד ושם');S.myName=name;save();const b=$('#jn');b.disabled=true;b.innerHTML='<span class="loader"></span>';

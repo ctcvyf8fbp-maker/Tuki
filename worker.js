@@ -7,6 +7,7 @@
 //   ALLOWED_ORIGIN  (Text)    – https://ctcvyf8fbp-maker.github.io
 //                               (אפשר כמה כתובות מופרדות בפסיק. כתובות האפליקציה מתווספות אוטומטית)
 //   MODEL           (Text, לא חובה) – ברירת מחדל: gemini-flash-latest
+//   TEACHER_CODE    (Secret)  – קוד מורה: רק מי שיודע אותו יכול לפתוח כיתה או חידון כיתתי
 // Bindings:
 //   TUKI_KV         (KV namespace) – בשביל כיתות ולוח מורה
 //   AI              (Workers AI)   – בשביל הקול האנושי (הקראה)
@@ -42,6 +43,7 @@ export default {
     try { body = await req.json(); } catch { return json({ error: 'bad_json' }, 400); }
 
     const path = url.pathname;
+    if (path === '/teacher/check') return json(teacherOk(env, body) ? { ok: true } : { error: 'bad_tcode' }, teacherOk(env, body) ? 200 : 403);
     if (path.startsWith('/class')) return classApi(path, body || {}, env, json);
     if (path.startsWith('/room')) return roomApi(path, body || {}, env, json);
 
@@ -109,6 +111,12 @@ function rnd(n, abc) {
   const a = crypto.getRandomValues(new Uint8Array(n));
   return [...a].map(x => abc[x % abc.length]).join('');
 }
+// קוד מורה – אם TEACHER_CODE לא הוגדר ב-Cloudflare, אף אחד לא יכול לפתוח כיתה חדשה
+function teacherOk(env, b) {
+  const want = String(env.TEACHER_CODE || '').trim().toUpperCase();
+  const got = String((b && b.tcode) || '').trim().toUpperCase();
+  return !!want && got === want;
+}
 const clean = (s, n) => String(s ?? '').slice(0, n).trim();
 const num = v => Math.max(0, Math.min(1e9, Math.round(+v || 0)));
 
@@ -117,6 +125,7 @@ async function classApi(path, b, env, json) {
   if (!KV) return json({ error: 'no_kv' }, 500);
 
   if (path === '/class/create') {
+    if (!teacherOk(env, b)) return json({ error: 'bad_tcode' }, 403);
     const name = clean(b.name, 60) || 'My class';
     let code = '';
     for (let i = 0; i < 6; i++) { code = rnd(6, CODE_ABC); if (!(await KV.get('class:' + code))) break; }
@@ -203,6 +212,7 @@ async function roomApi(path, b, env, json) {
 
   if (path === '/room/create') {
     const kind = b.kind === 'quiz' ? 'quiz' : 'duel';
+    if (kind === 'quiz' && !teacherOk(env, b)) return json({ error: 'bad_tcode' }, 403);
     const lvl = LV.includes(b.lvl) ? b.lvl : 'A2';
     const n = [10, 15, 20].includes(+b.n) ? +b.n : 10;
     let code = '';
